@@ -1,0 +1,8 @@
+documentación para ver que landmarks neceista
+
+tobillo rodillas cadera hombros codo muñecas cuello
+
+json, explicitamente los distintos puntos, indicar la relación de angulos entre puntos, 
+
+hacer un codigo de muestra de landmarks
+
