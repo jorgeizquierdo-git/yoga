@@ -5,8 +5,13 @@ import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
+<<<<<<< HEAD:Carpeta_Jorge/registrador_poses.py
 from pathlib import Path
 import sys
+=======
+import numpy as np
+from utils import teta
+>>>>>>> 1b4563b (los he sacado fuera de las carpetas. Así no hay problemas de directorios):registrador_poses.py
 
 RAIZ_YOGA = Path(__file__).resolve().parent.parent
 CARPETA_JULIO = RAIZ_YOGA / "Carpeta_julio"
@@ -107,8 +112,21 @@ if __name__ == "__main__":
     registrar_pose_desde_imagen( #deberías cabiar los valores de las rutas si vas a cambiar de representacón
         ruta_imagen="Carpeta_Jorge/media/p1.jpg",
         ruta_modelo="models/pose_landmarker_full.task",
+<<<<<<< HEAD:Carpeta_Jorge/registrador_poses.py
         ruta_salida_json="Carpeta_Jorge/jason/ejemplo1.json",
         nombre_pose="ejemplo",
         articulaciones_relevantes=list(ANGULOS_ESTANDAR.keys()),
         tolerancia=10,
     )
+=======
+        ruta_salida_json="",
+        nombre_pose="",
+        articulaciones_relevantes=[],
+        tolerancia=0
+    )
+    
+    
+    
+    
+    
+>>>>>>> 1b4563b (los he sacado fuera de las carpetas. Así no hay problemas de directorios):registrador_poses.py
