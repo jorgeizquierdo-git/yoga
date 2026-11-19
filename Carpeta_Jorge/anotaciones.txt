@@ -6,3 +6,7 @@ json, explicitamente los distintos puntos, indicar la relación de angulos entre
 
 hacer un codigo de muestra de landmarks
 
+guardar solo los angulos importantes.
+
+
+
