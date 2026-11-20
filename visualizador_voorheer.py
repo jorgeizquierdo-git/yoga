@@ -135,6 +135,6 @@ def mostrar_json_lado_a_lado(
 
 if __name__ == "__main__":
     mostrar_json_lado_a_lado(
-        ruta_json="jason/medio/p9.json",
-        ruta_imagen="media/medio/p9.jpg",
+        ruta_json="jason/facil/debug.json",
+        ruta_imagen="media/facil/debug.jpg",
     )

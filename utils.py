@@ -67,7 +67,7 @@ NOMBRES = [
     "punta_pie_izq", "punta_pie_der",
 ]
 
-ANGULOS = {
+ANGULOS = {"angulos": {
     "rodilla_izq": {"puntos": ["cadera_izq", "rodilla_izq", "tobillo_izq"]},
     "rodilla_der": {"puntos": ["cadera_der", "rodilla_der", "tobillo_der"]},
     "cadera_izq": {"puntos": ["hombro_izq", "cadera_izq", "rodilla_izq"]},
@@ -80,7 +80,7 @@ ANGULOS = {
     "tobillo_der": {"puntos": ["rodilla_der", "tobillo_der", "punta_pie_der"]},
     "cabeza_tronco_izq": {"puntos": ["nariz", "hombro_izq", "cadera_izq"]},
     "cabeza_tronco_der": {"puntos": ["nariz", "hombro_der", "cadera_der"]},
-}
+}}
 
 MODEL_PATH = "models/pose_landmarker_full.task"
 CAMERA_INDEX = 0
@@ -97,8 +97,8 @@ COLOR_PUNTO_PREDETERMINADO = (0, 255, 255)
 COLOR_PUNTO_CORRECTO = (0, 255, 0)
 COLOR_PUNTO_INCORRECTO = (0, 0, 255)
 
-UMBRAL_APROBADO = 80.0   # puntuación mínima (0-100) para dar la pose por buena
-FACTOR_CAIDA = 3.0       # error (en múltiplos de la tolerancia) en el que la nota de un ángulo llega a 0 (> 1)
+UMBRAL_APROBADO = 70.0   # puntuación global mínima (0-100) para dar la pose por buena
+ERROR_MAXIMO = 60.0      # error (en grados) a partir del cual un ángulo puntúa 0; con error 0 puntúa 1 y baja linealmente
 
 
 def _indice(p):
@@ -116,7 +116,7 @@ def _angulos_relevantes(pose):
     return [(clave, datos) for clave, datos in pose["angulos"].items() if not _no_relevante(datos)]
 
 def _estado(observado, error, tolerancia):
-    if not observado:
+    if observado is None:
         return NO_EVALUABLE
 
     if abs(error) > tolerancia:

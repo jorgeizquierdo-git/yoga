@@ -1,5 +1,5 @@
 import json
-from utils import (NO_EVALUABLE, OK, FALLO, FACTOR_CAIDA, UMBRAL_APROBADO, _angulos_relevantes, _estado,
+from utils import (NO_EVALUABLE, OK, FALLO, ERROR_MAXIMO, UMBRAL_APROBADO, _angulos_relevantes,
 comprobar_encuadre, puntos_necesarios, extraer_puntos, medir_angulos)
 
 def cargar_postura(ruta):
@@ -8,37 +8,31 @@ def cargar_postura(ruta):
     pose = datos["postura"]
     return pose
 
-limite = lambda tolerancia: tolerancia * FACTOR_CAIDA
-nota_angulo = lambda error, tolerancia: 1.0 if error <= tolerancia else (0 if error >= limite(tolerancia) else (limite(tolerancia) - error) / (limite(tolerancia) - tolerancia))
-# Vaya desastre he hecho en este lambda xdxdxdxdxxdxd
+def nota_angulo(error):
+    return max(0.0, 1.0 - abs(error) / ERROR_MAXIMO)
 
 def comparar_posturas(observados, esperado):
     detalle = {}
 
     for clave, datos in _angulos_relevantes(esperado):
-        objetivo, tolerancia, observado = datos["objetivo"], datos["tol"], observados.get(clave)
-        if observado is None:
-            error = None
+        objetivo, observado = datos["objetivo"], observados.get(clave)
+        error = None if observado is None else observado - objetivo
 
         detalle[clave] = {
             "observado": observado,
             "objetivo": objetivo,
-            "tol": tolerancia,
             "error": error,
-            "nota": None if not observado else nota_angulo(error, tolerancia),
-            "estado": _estado(observado, error, tolerancia)
+            "nota": None if error is None else nota_angulo(error)
         }
 
     resultado = {
-        "estado": None, 
-        "puntuacion": None, 
-        "total": len(detalle), 
-        "avisos": [], 
-        "detalle": detalle,
-        "aciertos": sum(d["estado"] == OK for d in detalle.values())
+        "estado": None,
+        "puntuacion": None,
+        "avisos": [],
+        "detalle": detalle
     }
 
-    sin_medir = [clave for clave, datos in detalle.items() if detalle["estado"] == NO_EVALUABLE]
+    sin_medir = [clave for clave, datos in detalle.items() if datos["nota"] is None]
     if sin_medir:
         resultado["estado"] = NO_EVALUABLE
         resultado["avisos"] = ["No se ven bien: " + ", ".join(c.replace("_", " ") for c in sin_medir)]
@@ -46,6 +40,7 @@ def comparar_posturas(observados, esperado):
 
     resultado["puntuacion"] = 100.0 * sum(datos["nota"] for datos in detalle.values()) / len(detalle)
     resultado["estado"] = OK if resultado["puntuacion"] >= UMBRAL_APROBADO else FALLO
+    return resultado
 
 
 def comparar_pose(result, ruta):
@@ -55,12 +50,10 @@ def comparar_pose(result, ruta):
     puntos, visibilidad = extraer_puntos(result) if encuadre else (None, None)
     if puntos is None:
         return {
-            "estado": NO_EVALUABLE, 
-            "puntuacion": None, 
-            "aciertos": 0,
-            "total": len(_angulos_relevantes(pose)),
-            "detalle": {},
-            "avisos": avisos or ["No hay puntos disponibles"]
+            "estado": NO_EVALUABLE,
+            "puntuacion": None,
+            "avisos": avisos or ["No hay puntos disponibles"],
+            "detalle": {}
         }
 
     medidos = medir_angulos(puntos, pose, visibilidad)

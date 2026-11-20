@@ -6,6 +6,7 @@ import mediapipe as mp
 
 from utils import (MIN_VISIBILIDAD, CAMERA_INDEX, MODEL_PATH, NOMBRES, ANGULOS, COLOR_HUESO, COLOR_PUNTO_CORRECTO, COLOR_PUNTO_INCORRECTO, COLOR_PUNTO_PREDETERMINADO,
 INTERVALOS_PRINT, INTERVALOS_COMPROBACION, extraer_puntos, medir_angulos, _indice, comprobar_encuadre, puntos_necesarios)
+from poses import comparar_pose
 
 
 BaseOptions = mp.tasks.BaseOptions
@@ -58,6 +59,19 @@ def imprimir_angulos(result):
         texto = f"{valor:13.1f}" if valor is not None else f"{'no evaluable':>13}"
         print(f"{clave:<20} {'-'.join(map(str, ids)):<30} {vmin:7.2f} {texto}")
 
+def imprimir_comparacion(res):
+    puntuacion = "-" if res["puntuacion"] is None else f"{res['puntuacion']:.1f}"
+    print(f"Comparacion con la pose: estado={res['estado']} puntuacion={puntuacion}")
+
+    for aviso in res["avisos"]:
+        print(f"  {aviso}")
+
+    for clave, d in res["detalle"].items():
+        observado = "-" if d["observado"] is None else f"{d['observado']:.1f}"
+        error = "-" if d["error"] is None else f"{d['error']:+.1f}"
+        nota = "-" if d["nota"] is None else f"{d['nota']:.2f}"
+        print(f"  {clave:<20} observado={observado:>6} objetivo={d['objetivo']:>6} error={error:>7} nota={nota}")
+
 def main():
     if not os.path.exists(MODEL_PATH):
         print(f"El camino {MODEL_PATH} no lleva a ningún modelo")
@@ -76,7 +90,8 @@ def main():
 
     t0 = time.monotonic()
     t_prev = t0
-    intervalo_print = t0
+    ultimo_print = t0
+    ultima_comprobacion = t0
 
     with PoseLandmarker.create_from_options(options) as landmarker:
         while True:
@@ -99,6 +114,7 @@ def main():
 
             if not result.pose_landmarks:
                 cv2.putText(frame, "No se detecta ninguna persona", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+                cv2.imshow("Esqueleto", frame)
                 continue
             
             landmarks = result.pose_landmarks[0]
@@ -111,13 +127,15 @@ def main():
                 for n, aviso in enumerate(avisos):
                     cv2.putText(frame, aviso, (10, 60 + 28 * n), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
             """
-            if ahora - intervalo_print >= INTERVALOS_PRINT:
+            if ahora - ultimo_print >= INTERVALOS_PRINT:
                 world_landmarks = result.pose_world_landmarks[0] if result.pose_world_landmarks else None
-                imprimir_coordenadas(landmarks, world_landmarks, ahora - intervalo_print)
+                imprimir_coordenadas(landmarks, world_landmarks, ahora - t0)
                 imprimir_angulos(result)
+                ultimo_print = ahora
 
-            if ahora - intervalo_print >= INTERVALOS_COMPROBACION:
-                pass #Aqui hay que implementar la comprobación de la postura del usuario con uno concreto (inyectado directamente a la función). Preferimos la imagen p3
+            if ahora - ultima_comprobacion >= INTERVALOS_COMPROBACION:
+                imprimir_comparacion(comparar_pose(result, "jason/facil/p3.json"))
+                ultima_comprobacion = ahora
 
             fps = 1.0 / max(ahora - t_prev, 1e-6)
             t_prev = ahora
