@@ -104,9 +104,9 @@ def registrar_pose_desde_imagen(
 
 if __name__ == "__main__":
     registrar_pose_desde_imagen( #deberías cabiar los valores de las rutas si vas a cambiar de representacón
-        ruta_imagen="Carpeta_Jorge/media/p1.jpg",
+        ruta_imagen="media/dificil/p6.jpg",
         ruta_modelo="models/pose_landmarker_full.task",
-        ruta_salida_json="Carpeta_Jorge/jason/ejemplo1.json",
+        ruta_salida_json="jason/ejemplo6.json",
         nombre_pose="ejemplo",
         articulaciones_relevantes=list(ANGULOS_ESTANDAR.keys()),
         tolerancia=10,

@@ -8,14 +8,6 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
 
-RAIZ_YOGA = Path(__file__).resolve().parent.parent
-CARPETA_JULIO = RAIZ_YOGA / "Carpeta_julio"
-
-for ruta in (RAIZ_YOGA, CARPETA_JULIO):
-    ruta_str = str(ruta)
-    if ruta_str not in sys.path:
-        sys.path.insert(0, ruta_str)
-
 import utils
 
 
@@ -118,7 +110,7 @@ def mostrar_json_lado_a_lado(
     max_alto=900,
 ):
     if ruta_modelo is None:
-        ruta_modelo = RAIZ_YOGA / "models" / "pose_landmarker_full.task"
+        ruta_modelo = "models/pose_landmarker_full.task"
 
     postura = cargar_postura_json(ruta_json)
     imagen_bgr, resultado = detectar_landmarks_imagen(ruta_imagen, ruta_modelo)
@@ -143,6 +135,6 @@ def mostrar_json_lado_a_lado(
 
 if __name__ == "__main__":
     mostrar_json_lado_a_lado(
-        ruta_json=RAIZ_YOGA / "Carpeta_Jorge" / "jason" / "ejemplo0.json",
-        ruta_imagen=RAIZ_YOGA / "Carpeta_Jorge" / "media" / "p0.jpg",
+        ruta_json="jason/ejemplo6.json",
+        ruta_imagen="media/dificil/p6.jpg",
     )
