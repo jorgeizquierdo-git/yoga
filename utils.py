@@ -21,6 +21,11 @@ Estados de un ángulo o de una postura:
     NO_EVALUABLE  -> no se pudo medir por poca visibilidad (el fallo es de la cámara, no del jugador)
 En el juego, NO_EVALUABLE debe PAUSAR (o no contar el tiempo de "mantener_s") y pedir que se ajuste
 el jugador, pero nunca penalizar.
+
+Ángulos no relevantes: en el .json, un ángulo con "objetivo": null (así los deja registrador_poses.py
+cuando no se marca como relevante) se IGNORA por completo: no se mide, no se evalúa y sus puntos no se
+exigen en el encuadre. Un ángulo sin la clave "objetivo" (p. ej. los de depuración del tracker, que solo
+se miden) sí se mide, pero no se puede evaluar.
 """
 
 import numpy as np
@@ -32,10 +37,6 @@ import numpy as np
 # False -> coordenadas normalizadas (x, y, z): x e y van en unidades distintas (ancho/alto), así que
 #          los ángulos 3D salen distorsionados. Solo para comparar.
 USAR_WORLD = True
-
-# Un ángulo solo se calcula (y el encuadre solo se da por bueno) si sus puntos tienen al menos
-# esta visibilidad (0-1). Se usa el mismo umbral en los dos sitios para que sean coherentes.
-MIN_VISIBILIDAD = 0.5
 
 # Un punto se considera "fuera de la imagen" si queda a menos de este margen del borde (0-1).
 MARGEN_ENCUADRE = 0.02
@@ -65,13 +66,63 @@ NOMBRES = [
     "talon_izq", "talon_der",
     "punta_pie_izq", "punta_pie_der",
 ]
+
+ANGULOS = {
+    "rodilla_izq": {"puntos": ["cadera_izq", "rodilla_izq", "tobillo_izq"]},
+    "rodilla_der": {"puntos": ["cadera_der", "rodilla_der", "tobillo_der"]},
+    "cadera_izq": {"puntos": ["hombro_izq", "cadera_izq", "rodilla_izq"]},
+    "cadera_der": {"puntos": ["hombro_der", "cadera_der", "rodilla_der"]},
+    "codo_izq": {"puntos": ["hombro_izq", "codo_izq", "muneca_izq"]},
+    "codo_der": {"puntos": ["hombro_der", "codo_der", "muneca_der"]},
+    "hombro_izq": {"puntos": ["cadera_izq", "hombro_izq", "codo_izq"]},
+    "hombro_der": {"puntos": ["cadera_der", "hombro_der", "codo_der"]},
+    "tobillo_izq": {"puntos": ["rodilla_izq", "tobillo_izq", "punta_pie_izq"]},
+    "tobillo_der": {"puntos": ["rodilla_der", "tobillo_der", "punta_pie_der"]},
+    "cabeza_tronco_izq": {"puntos": ["nariz", "hombro_izq", "cadera_izq"]},
+    "cabeza_tronco_der": {"puntos": ["nariz", "hombro_der", "cadera_der"]},
+}
+
+MODEL_PATH = "models/pose_landmarker_full.task"
+CAMERA_INDEX = 0
+MIN_VISIBILIDAD = 0.1        # visibilidad mínima para DIBUJAR un punto (la de los ángulos está en utils.MIN_VISIBILIDAD)
+INTERVALOS_PRINT = 10          # cada cuántos segundos se vuelcan coordenadas y ángulos por consola
+
+INTERVALOS_COMPROBACION = 5
+
 IDX = {nombre: i for i, nombre in enumerate(NOMBRES)}   # IDX["rodilla_der"] == 26
+
+# BGR (por alguna razón)
+COLOR_HUESO = (255, 0, 0)
+COLOR_PUNTO_PREDETERMINADO = (0, 255, 255)
+COLOR_PUNTO_CORRECTO = (0, 255, 0)
+COLOR_PUNTO_INCORRECTO = (0, 0, 255)
+
+UMBRAL_APROBADO = 80.0   # puntuación mínima (0-100) para dar la pose por buena
+FACTOR_CAIDA = 3.0       # error (en múltiplos de la tolerancia) en el que la nota de un ángulo llega a 0 (> 1)
 
 
 def _indice(p):
     """Acepta un índice (26) o un nombre ("rodilla_der") y devuelve el índice."""
     return IDX[p] if isinstance(p, str) else int(p)
 
+
+def _no_relevante(datos):
+    """True si el ángulo está marcado como no relevante en el .json ("objetivo": null)."""
+    return "objetivo" in datos and datos["objetivo"] is None
+
+
+def _angulos_relevantes(pose):
+    """Pares (clave, datos) de los ángulos de la postura que no están marcados como no relevantes."""
+    return [(clave, datos) for clave, datos in pose["angulos"].items() if not _no_relevante(datos)]
+
+def _estado(observado, error, tolerancia):
+    if not observado:
+        return NO_EVALUABLE
+
+    if abs(error) > tolerancia:
+        return FALLO
+
+    return OK
 
 # ---------------------------------------------------------------------------
 # Matemáticas
@@ -92,31 +143,23 @@ def matriz_de_putitos(landmarks):
     return np.array([[p.x, p.y, p.z] for p in landmarks], dtype=np.float64)
 
 
-def extraer_puntos(result, usar_world=USAR_WORLD):
-    """
-    Del resultado de MediaPipe saca (puntos, visibilidad):
-        puntos:      array (33, 3) con coordenadas world (m) o normalizadas, según usar_world
-        visibilidad: array (33,)   siempre tomada de los landmarks normalizados
-    Devuelve (None, None) si no hay persona (o si se piden world y el modelo no las ha dado).
-    """
+def extraer_puntos(result):
     if not result.pose_landmarks:
         return None, None
     normalizados = result.pose_landmarks[0]
     visibilidad = np.array([p.visibility for p in normalizados], dtype=np.float64)
 
-    if usar_world:
-        if not result.pose_world_landmarks:
-            return None, None
-        return matriz_de_putitos(result.pose_world_landmarks[0]), visibilidad
-    return matriz_de_putitos(normalizados), visibilidad
+    if not result.pose_world_landmarks:
+        return matriz_de_putitos(normalizados), visibilidad
+    return matriz_de_putitos(result.pose_world_landmarks[0]), visibilidad
 
 
 # ---------------------------------------------------------------------------
 # Encuadre: ¿se ve el cuerpo que necesitamos?
 # ---------------------------------------------------------------------------
 def puntos_necesarios(pose):
-    """Índices (ordenados, sin repetir) de todos los puntos que usan los ángulos de una postura."""
-    return sorted({_indice(p) for datos in pose["angulos"].values() for p in datos["puntos"]})
+    """Índices (ordenados, sin repetir) de los puntos que usan los ángulos RELEVANTES de una postura."""
+    return sorted({_indice(p) for _, datos in _angulos_relevantes(pose) for p in datos["puntos"]})
 
 
 def _lista_nombres(indices, maximo=4):
@@ -167,11 +210,11 @@ def comprobar_encuadre(result, indices):
 # ---------------------------------------------------------------------------
 def medir_angulos(puntos, pose, visibilidad=None):
     """
-    Mide todos los ángulos definidos en pose["angulos"].
+    Mide los ángulos relevantes definidos en pose["angulos"] (se saltan los de "objetivo": null).
     Devuelve {clave: grados} o {clave: None} si algún punto del ángulo es poco visible.
     """
     medidos = {}
-    for clave, datos in pose["angulos"].items():
+    for clave, datos in _angulos_relevantes(pose):
         ids = [_indice(p) for p in datos["puntos"]]
         if visibilidad is not None and min(visibilidad[i] for i in ids) < MIN_VISIBILIDAD:
             medidos[clave] = None
@@ -179,21 +222,20 @@ def medir_angulos(puntos, pose, visibilidad=None):
             medidos[clave] = teta(*puntos[ids])
     return medidos
 
-
-medir_agulos = medir_angulos   # alias con el nombre antiguo (con la errata) por compatibilidad
-
-
 def evaluar(medidos, pose):
     """
     Compara lo medido con lo esperado. Devuelve, por cada ángulo:
         {"medido", "objetivo", "tol", "error", "ok", "estado"}
     error = medido - objetivo (con signo: sirve para decir "abre más" / "cierra más").
     estado: OK, FALLO o NO_EVALUABLE. Si es NO_EVALUABLE, medido y error son None y ok es False.
+    Los ángulos con "objetivo": null no aparecen en el resultado.
     """
     detalle = {}
-    for clave, datos in pose["angulos"].items():
+    for clave, datos in _angulos_relevantes(pose):
         objetivo = datos["objetivo"]
         tol = datos.get("tol", datos.get("tolerancia"))   # el .json usa "tol"
+        if tol is None:
+            raise ValueError(f"El ángulo '{clave}' tiene objetivo pero no tolerancia ('tol') en el .json")
         medido = medidos.get(clave)
         if medido is None:
             detalle[clave] = {"medido": None, "objetivo": objetivo, "tol": tol,
@@ -215,6 +257,8 @@ def estado_postura(medidos, pose):
     NO_EVALUABLE tiene prioridad sobre FALLO: mientras falte información no se juzga al jugador.
     """
     detalle = evaluar(medidos, pose)
+    if not detalle:
+        raise ValueError("La postura no tiene ningún ángulo relevante (todos con 'objetivo': null)")
     estados = {d["estado"] for d in detalle.values()}
     if NO_EVALUABLE in estados:
         return NO_EVALUABLE, detalle

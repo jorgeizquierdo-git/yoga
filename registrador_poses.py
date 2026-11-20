@@ -15,23 +15,7 @@ for ruta in (RAIZ_YOGA, CARPETA_JULIO):
     if ruta_str not in sys.path:
         sys.path.insert(0, ruta_str)
 
-import utils
 from utils import extraer_puntos, medir_angulos
-
-ANGULOS_ESTANDAR = {
-    "rodilla_izq": {"puntos": ["cadera_izq", "rodilla_izq", "tobillo_izq"]},
-    "rodilla_der": {"puntos": ["cadera_der", "rodilla_der", "tobillo_der"]},
-    "cadera_izq": {"puntos": ["hombro_izq", "cadera_izq", "rodilla_izq"]},
-    "cadera_der": {"puntos": ["hombro_der", "cadera_der", "rodilla_der"]},
-    "codo_izq": {"puntos": ["hombro_izq", "codo_izq", "muneca_izq"]},
-    "codo_der": {"puntos": ["hombro_der", "codo_der", "muneca_der"]},
-    "hombro_izq": {"puntos": ["cadera_izq", "hombro_izq", "codo_izq"]},
-    "hombro_der": {"puntos": ["cadera_der", "hombro_der", "codo_der"]},
-    "tobillo_izq": {"puntos": ["rodilla_izq", "tobillo_izq", "punta_pie_izq"]},
-    "tobillo_der": {"puntos": ["rodilla_der", "tobillo_der", "punta_pie_der"]},
-    "cabeza_tronco_izq": {"puntos": ["nariz", "hombro_izq", "cadera_izq"]},
-    "cabeza_tronco_der": {"puntos": ["nariz", "hombro_der", "cadera_der"]},
-}
 
 
 def detectar_pose(ruta_imagen, ruta_modelo):
