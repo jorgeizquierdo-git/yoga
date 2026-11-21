@@ -8,7 +8,7 @@ Flujo previsto en el juego:
     ok, avisos = comprobar_encuadre(result, puntos_necesarios(pose))
 
     # 2) Medir y evaluar la postura
-    puntos, visib = extraer_puntos(result)              # (33, 3) y (33,)
+    puntos, visib = extraer_puntos(result, ancho, alto) # (33, 2) en píxeles y (33,)
     medidos = medir_angulos(puntos, pose, visib)        # {"rodilla_der": 170.2, "codo_izq": None, ...}
     estado, detalle = estado_postura(medidos, pose)     # "ok" | "fallo" | "no_evaluable"
 
@@ -33,10 +33,10 @@ import numpy as np
 # ---------------------------------------------------------------------------
 # Configuración global
 # ---------------------------------------------------------------------------
-# True  -> coordenadas "world" (wx, wy, wz) en metros: sin distorsión por el formato de la imagen.
-# False -> coordenadas normalizadas (x, y, z): x e y van en unidades distintas (ancho/alto), así que
-#          los ángulos 3D salen distorsionados. Solo para comparar.
-USAR_WORLD = True
+# Los ángulos se calculan en 2D, con las coordenadas (x, y) en PÍXELES de la imagen: x·ancho, y·alto.
+# Se descarta la z (profundidad), que es la coordenada que peor estima MediaPipe, y no se usan las
+# normalizadas (0-1) tal cual porque x e y irían en unidades distintas y deformarían los ángulos.
+# Así el ángulo calculado es exactamente el que se ve dibujado en pantalla.
 
 # Un punto se considera "fuera de la imagen" si queda a menos de este margen del borde (0-1).
 MARGEN_ENCUADRE = 0.02
@@ -88,14 +88,25 @@ MIN_VISIBILIDAD = 0.1        # visibilidad mínima para DIBUJAR un punto (la de 
 INTERVALOS_PRINT = 10          # cada cuántos segundos se vuelcan coordenadas y ángulos por consola
 
 INTERVALOS_COMPROBACION = 5
+INTERVALO_CAPTURA = 20         # cada cuántos segundos se captura el esqueleto y se guarda en un .json
+CARPETA_CAPTURAS = "jason/capturas"
+
+# Articulaciones cuyo NOMBRE se escribe en pantalla (las que más guerra dan). El valor del ángulo se
+# escribe en todos los vértices de ANGULOS; el nombre, solo en estos.
+NOMBRES_EN_PANTALLA = {"rodilla", "cadera", "tobillo", "hombro", "codo"}
+COLOR_TEXTO = (255, 255, 255)
 
 IDX = {nombre: i for i, nombre in enumerate(NOMBRES)}   # IDX["rodilla_der"] == 26
 
 # BGR (por alguna razón)
 COLOR_HUESO = (255, 0, 0)
-COLOR_PUNTO_PREDETERMINADO = (0, 255, 255)
-COLOR_PUNTO_CORRECTO = (0, 255, 0)
-COLOR_PUNTO_INCORRECTO = (0, 0, 255)
+COLOR_PUNTO_PREDETERMINADO = (255, 200, 120)   # azul claro: puntos que la pose no evalúa
+COLOR_PUNTO_CORRECTO = (0, 255, 0)             # verde:    |error| <= tol
+COLOR_PUNTO_CERCA = (0, 255, 255)              # amarillo: tol < |error| <= tol + MARGEN_CERCA
+COLOR_PUNTO_INCORRECTO = (0, 0, 255)           # rojo:     |error| > tol + MARGEN_CERCA, o no se pudo medir
+
+MARGEN_CERCA = 10.0      # grados por encima de la tolerancia en los que el ángulo se pinta en amarillo ("casi")
+ESCALA_VENTANA = 2       # la ventana del tracker se abre a este múltiplo del tamaño de la cámara (y se puede estirar)
 
 UMBRAL_APROBADO = 70.0   # puntuación global mínima (0-100) para dar la pose por buena
 ERROR_MAXIMO = 60.0      # error (en grados) a partir del cual un ángulo puntúa 0; con error 0 puntúa 1 y baja linealmente
@@ -138,20 +149,38 @@ def teta(a, b, c):
     return float(np.degrees(np.arccos(np.clip(coseno, -1.0, 1.0))))
 
 
-def matriz_de_putitos(landmarks):
-    """Lista de landmarks (con .x .y .z) -> array (N, 3)."""
-    return np.array([[p.x, p.y, p.z] for p in landmarks], dtype=np.float64)
+def matriz_de_putitos(landmarks, ancho, alto):
+    """Lista de landmarks normalizados (con .x .y) -> array (N, 2) en píxeles: (x·ancho, y·alto)."""
+    return np.array([[p.x * ancho, p.y * alto] for p in landmarks], dtype=np.float64)
 
 
-def extraer_puntos(result):
+def extraer_puntos(result, ancho, alto):
+    """
+    Devuelve (puntos, visibilidad): puntos es (33, 2) en píxeles y visibilidad (33,).
+    ancho y alto son los de la imagen que se pasó a MediaPipe (frame.shape[1], frame.shape[0]).
+    """
     if not result.pose_landmarks:
         return None, None
     normalizados = result.pose_landmarks[0]
     visibilidad = np.array([p.visibility for p in normalizados], dtype=np.float64)
+    return matriz_de_putitos(normalizados, ancho, alto), visibilidad
 
-    if not result.pose_world_landmarks:
-        return matriz_de_putitos(normalizados), visibilidad
-    return matriz_de_putitos(result.pose_world_landmarks[0]), visibilidad
+
+def esqueleto_a_dict(result, ancho, alto):
+    """
+    Los 33 puntos del esqueleto en píxeles, para guardarlos en un .json y poder reconstruir la postura:
+        {"ancho": w, "alto": h, "puntos": [{"idx", "nombre", "x", "y", "visibilidad"}, ...]}
+    """
+    puntos, visibilidad = extraer_puntos(result, ancho, alto)
+    if puntos is None:
+        return None
+    return {
+        "ancho": int(ancho),
+        "alto": int(alto),
+        "puntos": [{"idx": i, "nombre": NOMBRES[i], "x": round(float(x), 1), "y": round(float(y), 1),
+                    "visibilidad": round(float(v), 3)}
+                   for i, ((x, y), v) in enumerate(zip(puntos, visibilidad))],
+    }
 
 
 # ---------------------------------------------------------------------------

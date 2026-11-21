@@ -1,0 +1,353 @@
+{
+  "postura": {
+    "nombre": "captura_181101",
+    "mantener_s": 10,
+    "angulos": {
+      "rodilla_izq": {
+        "puntos": [
+          "cadera_izq",
+          "rodilla_izq",
+          "tobillo_izq"
+        ],
+        "objetivo": 171.5,
+        "tol": 10
+      },
+      "rodilla_der": {
+        "puntos": [
+          "cadera_der",
+          "rodilla_der",
+          "tobillo_der"
+        ],
+        "objetivo": 115.3,
+        "tol": 10
+      },
+      "cadera_izq": {
+        "puntos": [
+          "hombro_izq",
+          "cadera_izq",
+          "rodilla_izq"
+        ],
+        "objetivo": 143.7,
+        "tol": 10
+      },
+      "cadera_der": {
+        "puntos": [
+          "hombro_der",
+          "cadera_der",
+          "rodilla_der"
+        ],
+        "objetivo": 116.2,
+        "tol": 10
+      },
+      "codo_izq": {
+        "puntos": [
+          "hombro_izq",
+          "codo_izq",
+          "muneca_izq"
+        ],
+        "objetivo": 172.5,
+        "tol": 10
+      },
+      "codo_der": {
+        "puntos": [
+          "hombro_der",
+          "codo_der",
+          "muneca_der"
+        ],
+        "objetivo": 175.4,
+        "tol": 10
+      },
+      "hombro_izq": {
+        "puntos": [
+          "cadera_izq",
+          "hombro_izq",
+          "codo_izq"
+        ],
+        "objetivo": 77.7,
+        "tol": 10
+      },
+      "hombro_der": {
+        "puntos": [
+          "cadera_der",
+          "hombro_der",
+          "codo_der"
+        ],
+        "objetivo": 106.0,
+        "tol": 10
+      },
+      "tobillo_izq": {
+        "puntos": [
+          "rodilla_izq",
+          "tobillo_izq",
+          "punta_pie_izq"
+        ],
+        "objetivo": 132.0,
+        "tol": 10
+      },
+      "tobillo_der": {
+        "puntos": [
+          "rodilla_der",
+          "tobillo_der",
+          "punta_pie_der"
+        ],
+        "objetivo": 111.5,
+        "tol": 10
+      },
+      "cabeza_tronco_izq": {
+        "puntos": [
+          "nariz",
+          "hombro_izq",
+          "cadera_izq"
+        ],
+        "objetivo": 126.2,
+        "tol": 10
+      },
+      "cabeza_tronco_der": {
+        "puntos": [
+          "nariz",
+          "hombro_der",
+          "cadera_der"
+        ],
+        "objetivo": 137.7,
+        "tol": 10
+      }
+    }
+  },
+  "esqueleto": {
+    "ancho": 640,
+    "alto": 480,
+    "puntos": [
+      {
+        "idx": 0,
+        "nombre": "nariz",
+        "x": 216.4,
+        "y": 207.2,
+        "visibilidad": 1.0
+      },
+      {
+        "idx": 1,
+        "nombre": "ojo_izq_int",
+        "x": 219.7,
+        "y": 201.6,
+        "visibilidad": 0.998
+      },
+      {
+        "idx": 2,
+        "nombre": "ojo_izq",
+        "x": 221.9,
+        "y": 201.6,
+        "visibilidad": 0.999
+      },
+      {
+        "idx": 3,
+        "nombre": "ojo_izq_ext",
+        "x": 224.2,
+        "y": 201.8,
+        "visibilidad": 0.999
+      },
+      {
+        "idx": 4,
+        "nombre": "ojo_der_int",
+        "x": 214.5,
+        "y": 202.1,
+        "visibilidad": 0.998
+      },
+      {
+        "idx": 5,
+        "nombre": "ojo_der",
+        "x": 213.0,
+        "y": 202.3,
+        "visibilidad": 0.998
+      },
+      {
+        "idx": 6,
+        "nombre": "ojo_der_ext",
+        "x": 211.6,
+        "y": 202.6,
+        "visibilidad": 0.998
+      },
+      {
+        "idx": 7,
+        "nombre": "oreja_izq",
+        "x": 229.9,
+        "y": 205.8,
+        "visibilidad": 0.998
+      },
+      {
+        "idx": 8,
+        "nombre": "oreja_der",
+        "x": 211.9,
+        "y": 206.0,
+        "visibilidad": 0.997
+      },
+      {
+        "idx": 9,
+        "nombre": "boca_izq",
+        "x": 221.9,
+        "y": 213.3,
+        "visibilidad": 0.999
+      },
+      {
+        "idx": 10,
+        "nombre": "boca_der",
+        "x": 214.6,
+        "y": 213.8,
+        "visibilidad": 0.998
+      },
+      {
+        "idx": 11,
+        "nombre": "hombro_izq",
+        "x": 256.1,
+        "y": 236.2,
+        "visibilidad": 1.0
+      },
+      {
+        "idx": 12,
+        "nombre": "hombro_der",
+        "x": 198.2,
+        "y": 238.6,
+        "visibilidad": 0.998
+      },
+      {
+        "idx": 13,
+        "nombre": "codo_izq",
+        "x": 298.7,
+        "y": 245.6,
+        "visibilidad": 0.997
+      },
+      {
+        "idx": 14,
+        "nombre": "codo_der",
+        "x": 155.6,
+        "y": 235.7,
+        "visibilidad": 0.987
+      },
+      {
+        "idx": 15,
+        "nombre": "muneca_izq",
+        "x": 336.7,
+        "y": 248.8,
+        "visibilidad": 0.987
+      },
+      {
+        "idx": 16,
+        "nombre": "muneca_der",
+        "x": 116.0,
+        "y": 229.8,
+        "visibilidad": 0.984
+      },
+      {
+        "idx": 17,
+        "nombre": "meñique_izq",
+        "x": 348.3,
+        "y": 249.8,
+        "visibilidad": 0.959
+      },
+      {
+        "idx": 18,
+        "nombre": "meñique_der",
+        "x": 103.0,
+        "y": 226.0,
+        "visibilidad": 0.95
+      },
+      {
+        "idx": 19,
+        "nombre": "indice_izq",
+        "x": 350.2,
+        "y": 249.3,
+        "visibilidad": 0.965
+      },
+      {
+        "idx": 20,
+        "nombre": "indice_der",
+        "x": 102.4,
+        "y": 226.4,
+        "visibilidad": 0.957
+      },
+      {
+        "idx": 21,
+        "nombre": "pulgar_izq",
+        "x": 345.5,
+        "y": 249.7,
+        "visibilidad": 0.966
+      },
+      {
+        "idx": 22,
+        "nombre": "pulgar_der",
+        "x": 106.8,
+        "y": 228.5,
+        "visibilidad": 0.963
+      },
+      {
+        "idx": 23,
+        "nombre": "cadera_izq",
+        "x": 256.0,
+        "y": 331.7,
+        "visibilidad": 0.998
+      },
+      {
+        "idx": 24,
+        "nombre": "cadera_der",
+        "x": 218.3,
+        "y": 332.4,
+        "visibilidad": 0.999
+      },
+      {
+        "idx": 25,
+        "nombre": "rodilla_izq",
+        "x": 291.1,
+        "y": 379.6,
+        "visibilidad": 0.998
+      },
+      {
+        "idx": 26,
+        "nombre": "rodilla_der",
+        "x": 175.1,
+        "y": 366.6,
+        "visibilidad": 0.999
+      },
+      {
+        "idx": 27,
+        "nombre": "tobillo_izq",
+        "x": 337.7,
+        "y": 426.6,
+        "visibilidad": 0.998
+      },
+      {
+        "idx": 28,
+        "nombre": "tobillo_der",
+        "x": 187.9,
+        "y": 422.1,
+        "visibilidad": 0.995
+      },
+      {
+        "idx": 29,
+        "nombre": "talon_izq",
+        "x": 343.9,
+        "y": 434.0,
+        "visibilidad": 0.918
+      },
+      {
+        "idx": 30,
+        "nombre": "talon_der",
+        "x": 197.5,
+        "y": 428.0,
+        "visibilidad": 0.982
+      },
+      {
+        "idx": 31,
+        "nombre": "punta_pie_izq",
+        "x": 336.8,
+        "y": 442.0,
+        "visibilidad": 0.992
+      },
+      {
+        "idx": 32,
+        "nombre": "punta_pie_der",
+        "x": 163.4,
+        "y": 439.0,
+        "visibilidad": 0.988
+      }
+    ]
+  }
+}
