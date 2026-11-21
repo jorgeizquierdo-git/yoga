@@ -15,7 +15,7 @@ for ruta in (RAIZ_YOGA, CARPETA_JULIO):
     if ruta_str not in sys.path:
         sys.path.insert(0, ruta_str)
 
-from utils import extraer_puntos, medir_angulos
+from utils import extraer_puntos, medir_angulos, ANGULOS
 
 
 def detectar_pose(ruta_imagen, ruta_modelo):
@@ -57,11 +57,11 @@ def registrar_pose_desde_imagen(
         raise ValueError("No se pudieron extraer puntos válidos de la detección.")
 
     relevantes_set = set(articulaciones_relevantes)
-    plantilla = {"angulos": ANGULOS_ESTANDAR}
+    plantilla = {"angulos": ANGULOS}
     angulos_calculados = medir_angulos(puntos, plantilla, visibilidad)
 
     angulos_json = {}
-    for clave, datos in ANGULOS_ESTANDAR.items():
+    for clave, datos in ANGULOS.items():
         es_relevante = clave in relevantes_set
         objetivo = round(float(angulos_calculados[clave]), 1) if (es_relevante and angulos_calculados.get(clave) is not None) else None
         angulos_json[clave] = {
@@ -92,7 +92,7 @@ if __name__ == "__main__":
         ruta_modelo="models/pose_landmarker_full.task",
         ruta_salida_json="jason/dificil/p11.json",
         nombre_pose="ejemplo",
-        articulaciones_relevantes=list(ANGULOS_ESTANDAR.keys()),
+        articulaciones_relevantes=list(ANGULOS.keys()),
         tolerancia=10,
     )
     
