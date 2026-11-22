@@ -1,7 +1,8 @@
 import copy
 import json
 from utils import (NO_EVALUABLE, OK, FALLO, ERROR_MAXIMO, UMBRAL_APROBADO, NOMBRES, IDX, _angulos_relevantes,
-comprobar_encuadre, puntos_necesarios, extraer_puntos, medir_angulos)
+comprobar_encuadre, puntos_necesarios, extraer_puntos, medir_angulos, PESO_POR_DEFECTO, COBERTURA_MINIMA,
+puntos_fuera_de_imagen, _indice)
 
 def cargar_postura(ruta):
     with open(ruta, "r", encoding="utf-8") as f:
@@ -51,6 +52,13 @@ def nota_angulo(error):
     return max(0.0, 1.0 - abs(error) / ERROR_MAXIMO)
 
 def comparar_posturas(observados, esperado):
+    """
+    Puntuación = media PONDERADA (por el "peso" de cada ángulo en el .json) de las notas de los ángulos MEDIDOS.
+
+    Los ángulos que no se han podido medir no tumban la evaluación: se puntúa con el resto si lo medido suma al
+    menos COBERTURA_MINIMA del peso total. Si no llega, el estado es NO_EVALUABLE y la puntuación None.
+    En "avisos" se listan los ángulos sin medir; "cobertura" es la fracción de peso medida (0-1).
+    """
     detalle = {}
 
     for clave, datos in _angulos_relevantes(esperado):
@@ -61,6 +69,7 @@ def comparar_posturas(observados, esperado):
             "observado": observado,
             "objetivo": objetivo,
             "tol": datos.get("tol", datos.get("tolerancia")),
+            "peso": float(datos.get("peso", PESO_POR_DEFECTO)),
             "error": error,
             "nota": None if error is None else nota_angulo(error)
         }
@@ -68,33 +77,52 @@ def comparar_posturas(observados, esperado):
     resultado = {
         "estado": None,
         "puntuacion": None,
+        "cobertura": 0.0,
         "avisos": [],
         "detalle": detalle
     }
 
-    sin_medir = [clave for clave, datos in detalle.items() if datos["nota"] is None]
+    peso_total = sum(d["peso"] for d in detalle.values())
+    medidos = [d for d in detalle.values() if d["nota"] is not None]
+    peso_medido = sum(d["peso"] for d in medidos)
+    resultado["cobertura"] = peso_medido / peso_total if peso_total > 0 else 0.0
+
+    sin_medir = [clave for clave, d in detalle.items() if d["nota"] is None]
     if sin_medir:
+        resultado["avisos"].append("No se ven bien: " + ", ".join(c.replace("_", " ") for c in sin_medir))
+
+    if peso_medido <= 0 or resultado["cobertura"] < COBERTURA_MINIMA:
         resultado["estado"] = NO_EVALUABLE
-        resultado["avisos"] = ["No se ven bien: " + ", ".join(c.replace("_", " ") for c in sin_medir)]
         return resultado
 
-    resultado["puntuacion"] = 100.0 * sum(datos["nota"] for datos in detalle.values()) / len(detalle)
+    resultado["puntuacion"] = 100.0 * sum(d["peso"] * d["nota"] for d in medidos) / peso_medido
     resultado["estado"] = OK if resultado["puntuacion"] >= UMBRAL_APROBADO else FALLO
     return resultado
 
 
 def _comparar_una_version(result, pose, ancho, alto):
-    encuadre, avisos = comprobar_encuadre(result, puntos_necesarios(pose))
-    puntos, visibilidad = extraer_puntos(result, ancho, alto) if encuadre else (None, None)
+    """
+    Mide los ángulos de la pose y los compara. Un punto fuera de la imagen o poco visible solo anula los
+    ángulos que lo usan; el resto se evalúa igual (ver comparar_posturas y COBERTURA_MINIMA).
+    """
+    puntos, visibilidad = extraer_puntos(result, ancho, alto)
     if puntos is None:
-        # Sin encuadre no se mide nada, pero se devuelven los ángulos de la pose (sin valor) para que
+        # Sin persona no se mide nada, pero se devuelven los ángulos de la pose (sin valor) para que
         # quien dibuje sepa qué puntos marcar como no medidos.
         resultado = comparar_posturas({}, pose)
-        resultado["avisos"] = avisos or ["No hay puntos disponibles"]
+        resultado["avisos"] = ["No se detecta ninguna persona"]
         return resultado
 
     medidos = medir_angulos(puntos, pose, visibilidad)
-    return comparar_posturas(medidos, pose)
+    fuera = puntos_fuera_de_imagen(result)
+    for clave, datos in _angulos_relevantes(pose):
+        if any(_indice(p) in fuera for p in datos["puntos"]):
+            medidos[clave] = None                    # extrapolado por el modelo: no es de fiar
+
+    resultado = comparar_posturas(medidos, pose)
+    _, avisos_encuadre = comprobar_encuadre(result, puntos_necesarios(pose))
+    resultado["avisos"] = avisos_encuadre + resultado["avisos"]   # "Retrocede...", luego "No se ven bien..."
+    return resultado
 
 
 def comparar_pose(result, pose_o_ruta, ancho, alto):
@@ -116,6 +144,7 @@ def comparar_pose(result, pose_o_ruta, ancho, alto):
     original["lado"], espejo["lado"] = "original", "espejo"
 
     # Si una versión no se puede evaluar, gana la otra; si ninguna, se devuelve la original (con sus avisos).
+    # Los pesos viajan con cada ángulo, así que la versión espejo pondera igual que la original.
     if espejo["puntuacion"] is None:
         return original
     if original["puntuacion"] is None:

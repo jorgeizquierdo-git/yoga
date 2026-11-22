@@ -7,7 +7,7 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
 
-from utils import extraer_puntos, medir_angulos, esqueleto_a_dict, ANGULOS
+from utils import extraer_puntos, medir_angulos, esqueleto_a_dict, peso_de, ANGULOS
 
 
 def detectar_pose(ruta_imagen, ruta_modelo):
@@ -54,7 +54,12 @@ def registrar_pose_desde_imagen(
     articulaciones_relevantes,
     tolerancia=10,
     mantener_s=10,
+    pesos=None,
 ):
+    """
+    pesos: {clave o tipo: peso}, p. ej. {"cadera": 3, "rodilla_der": 2}. Lo que no aparezca vale PESO_POR_DEFECTO.
+    Se guarda como "peso" en cada ángulo relevante.
+    """
     resultado, ancho, alto = detectar_pose(ruta_imagen=ruta_imagen, ruta_modelo=ruta_modelo)
     puntos, visibilidad = extraer_puntos(resultado, ancho, alto)
     if puntos is None:
@@ -72,6 +77,7 @@ def registrar_pose_desde_imagen(
             "puntos": list(datos["puntos"]),
             "objetivo": objetivo,
             "tol": tolerancia if es_relevante else None,
+            "peso": peso_de(clave, pesos) if es_relevante else None,
         }
 
     contenido = {

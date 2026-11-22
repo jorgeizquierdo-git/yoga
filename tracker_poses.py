@@ -13,7 +13,7 @@ from poses import comparar_pose, cargar_postura
 from registrador_poses import registrar_pose_desde_imagen
 
 
-RUTA_POSE = "jason/dificil/p10.json"     # pose con la que se compara en vivo (colores verde/rojo)
+RUTA_POSE = "jason/facil/p3.json"     # pose con la que se compara en vivo (colores verde/rojo)
 
 BaseOptions = mp.tasks.BaseOptions
 PoseLandmarker = mp.tasks.vision.PoseLandmarker
@@ -158,17 +158,23 @@ def imprimir_angulos(result, ancho, alto):
         print(f"{clave:<20} {'-'.join(map(str, ids)):<30} {vmin:7.2f} {texto}")
 
 def imprimir_comparacion(res):
+    if res is None:
+        print(f"Sin comparacion: no existe la pose {RUTA_POSE}")
+        return
     puntuacion = "-" if res["puntuacion"] is None else f"{res['puntuacion']:.1f}"
-    print(f"Comparacion con la pose: estado={res['estado']} puntuacion={puntuacion} lado={res.get('lado', '-')}")
+    cobertura = f"{100 * res.get('cobertura', 0):.0f}%"
+    print(f"Comparacion con la pose: estado={res['estado']} puntuacion={puntuacion} "
+          f"medido={cobertura} del peso lado={res.get('lado', '-')}")
 
     for aviso in res["avisos"]:
-        print(f"  {aviso}")
+        print(f"  ! {aviso}")
 
     for clave, d in res["detalle"].items():
         observado = "-" if d["observado"] is None else f"{d['observado']:.1f}"
         error = "-" if d["error"] is None else f"{d['error']:+.1f}"
         nota = "-" if d["nota"] is None else f"{d['nota']:.2f}"
-        print(f"  {clave:<20} observado={observado:>6} objetivo={d['objetivo']:>6} error={error:>7} nota={nota}")
+        print(f"  {clave:<20} observado={observado:>6} objetivo={d['objetivo']:>6} error={error:>7} "
+              f"nota={nota} peso={d.get('peso', 1):g}")
 
 
 def capturar_esqueleto(frame_bgr):
@@ -216,7 +222,11 @@ def main():
         num_poses=1,
     )
 
-    pose = cargar_postura(RUTA_POSE)      # se carga una vez, no en cada frame
+    # Se carga una vez, no en cada frame. Si no existe (p. ej. aún no se han generado los .json), el tracker
+    # funciona igual pero sin comparar ni colorear.
+    pose = cargar_postura(RUTA_POSE) if os.path.exists(RUTA_POSE) else None
+    if pose is None:
+        print(f"[aviso] No existe {RUTA_POSE}: se muestra el esqueleto sin comparar con ninguna pose")
 
     t0 = time.monotonic()
     t_prev = t0
@@ -268,7 +278,7 @@ def main():
             landmarks = result.pose_landmarks[0]
             puntos, visibilidad = extraer_puntos(result, ancho, alto)
             medidos = medir_angulos(puntos, ANGULOS, visibilidad)
-            comparacion = comparar_pose(result, pose, ancho, alto)
+            comparacion = comparar_pose(result, pose, ancho, alto) if pose else None
             dibujar_esqueleto(frame, landmarks, medidos, comparacion)
 
             if ahora - ultimo_print >= INTERVALOS_PRINT:

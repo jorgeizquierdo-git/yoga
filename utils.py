@@ -109,6 +109,15 @@ MARGEN_CERCA = 15.0      # grados por encima de la tolerancia en los que el áng
 ESCALA_VENTANA = 2       # la ventana del tracker se abre a este múltiplo del tamaño de la cámara (y se puede estirar)
 
 UMBRAL_APROBADO = 70.0   # puntuación global mínima (0-100) para dar la pose por buena
+
+# Ponderaciones: cada ángulo de una postura puede llevar "peso" en su .json (si no lo lleva, vale PESO_POR_DEFECTO).
+# La puntuación es la media PONDERADA de las notas de los ángulos medidos.
+PESO_POR_DEFECTO = 1.0
+
+# Evaluación parcial: si algún ángulo no se puede medir (punto fuera de la imagen o poco visible) se puntúa con
+# los demás, siempre que lo medido sume al menos esta fracción del peso total de la postura. Por debajo, la pose
+# es NO_EVALUABLE (no se juzga al jugador: hay que pedirle que se recoloque).
+COBERTURA_MINIMA = 0.6
 ERROR_MAXIMO = 60.0      # error (en grados) a partir del cual un ángulo puntúa 0; con error 0 puntúa 1 y baja linealmente
 
 
@@ -186,6 +195,24 @@ def esqueleto_a_dict(result, ancho, alto):
 # ---------------------------------------------------------------------------
 # Encuadre: ¿se ve el cuerpo que necesitamos?
 # ---------------------------------------------------------------------------
+def peso_de(clave, pesos=None):
+    """
+    Peso de un ángulo según un diccionario de pesos que admite la clave exacta ("rodilla_der") o el tipo
+    ("rodilla", vale para los dos lados). La clave exacta manda sobre el tipo.
+    """
+    pesos = pesos or {}
+    return float(pesos.get(clave, pesos.get(clave.rsplit("_", 1)[0], PESO_POR_DEFECTO)))
+
+
+def puntos_fuera_de_imagen(result):
+    """Índices de los puntos que caen fuera de la imagen (con el margen MARGEN_ENCUADRE): no son de fiar."""
+    if not result.pose_landmarks:
+        return set()
+    m = MARGEN_ENCUADRE
+    return {i for i, p in enumerate(result.pose_landmarks[0])
+            if not (m <= p.x <= 1 - m and m <= p.y <= 1 - m)}
+
+
 def puntos_necesarios(pose):
     """Índices (ordenados, sin repetir) de los puntos que usan los ángulos RELEVANTES de una postura."""
     return sorted({_indice(p) for _, datos in _angulos_relevantes(pose) for p in datos["puntos"]})
