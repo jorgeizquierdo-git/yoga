@@ -13,7 +13,7 @@ from poses import comparar_pose, cargar_postura
 from registrador_poses import registrar_pose_desde_imagen
 
 
-RUTA_POSE = "jason/facil/p3.json"     # pose con la que se compara en vivo (colores verde/rojo)
+RUTA_POSE = "jason/dificil/p10.json"     # pose con la que se compara en vivo (colores verde/rojo)
 
 BaseOptions = mp.tasks.BaseOptions
 PoseLandmarker = mp.tasks.vision.PoseLandmarker

@@ -84,7 +84,7 @@ ANGULOS = {"angulos": {
 
 MODEL_PATH = "models/pose_landmarker_full.task"
 CAMERA_INDEX = 0
-MIN_VISIBILIDAD = 0.1        # visibilidad mínima para DIBUJAR un punto (la de los ángulos está en utils.MIN_VISIBILIDAD)
+MIN_VISIBILIDAD = 0.3        # visibilidad mínima para DIBUJAR un punto (la de los ángulos está en utils.MIN_VISIBILIDAD)
 INTERVALOS_PRINT = 10          # cada cuántos segundos se vuelcan coordenadas y ángulos por consola
 
 INTERVALOS_COMPROBACION = 5
@@ -105,7 +105,7 @@ COLOR_PUNTO_CORRECTO = (0, 255, 0)             # verde:    |error| <= tol
 COLOR_PUNTO_CERCA = (0, 255, 255)              # amarillo: tol < |error| <= tol + MARGEN_CERCA
 COLOR_PUNTO_INCORRECTO = (0, 0, 255)           # rojo:     |error| > tol + MARGEN_CERCA, o no se pudo medir
 
-MARGEN_CERCA = 10.0      # grados por encima de la tolerancia en los que el ángulo se pinta en amarillo ("casi")
+MARGEN_CERCA = 15.0      # grados por encima de la tolerancia en los que el ángulo se pinta en amarillo ("casi")
 ESCALA_VENTANA = 2       # la ventana del tracker se abre a este múltiplo del tamaño de la cámara (y se puede estirar)
 
 UMBRAL_APROBADO = 70.0   # puntuación global mínima (0-100) para dar la pose por buena
