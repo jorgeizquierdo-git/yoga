@@ -133,7 +133,10 @@ T_RESULTADO_POSE = 2       # s mostrando la nota de una pose antes de pasar a la
 SONIDOS_ACTIVOS = True     # False para jugar en silencio
 CARPETA_SONIDOS = "soniditos"
 VOLUMEN_SONIDOS = 1.0      # multiplica el volumen de los .wav (0-1; ya vienen al 40 %)
-AVISO_AUSENCIA_CADA = 3.0  # s entre zumbidos de "no se te ve" (para que no agobie)
+AVISO_AUSENCIA_CADA = 2.5  # s entre avisos de "no se te ve" (se repite mientras siga sin verte)
+# True: también se avisa (sonido + marco rojo) si se te ve solo en parte y por eso la postura no se puede
+# evaluar (te has salido a medias, demasiado cerca...). False: solo si la cámara no detecta a nadie.
+AVISAR_SI_NO_EVALUABLE = True
 AUSENCIA_MINIMA = 0.5      # s sin detectar al jugador antes del primer zumbido (evita avisos por parpadeos)
 TICS_FINALES = 3           # "tic" en cada uno de los últimos N segundos del tiempo límite
 

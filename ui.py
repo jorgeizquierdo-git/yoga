@@ -66,13 +66,17 @@ def barra(frame, x, y, w, h, progreso, color=VERDE):
     cv2.rectangle(frame, (x, y), (x + w, y + h), BLANCO, 1)
 
 
-def marco_rojo(frame):
-    """Marco rojo alrededor de toda la imagen: no se detecta al jugador."""
+def marco_rojo(frame, nadie=True):
+    """Marco rojo alrededor de toda la imagen: no se detecta al jugador (nadie=True) o solo en parte."""
     H, W = frame.shape[:2]
     g = max(8, int(12 * _escala(frame)))
     cv2.rectangle(frame, (0, 0), (W - 1, H - 1), ROJO, g)
-    # En el centro: cuando sale este aviso no hay nadie en pantalla, así que no tapa al jugador
-    texto(frame, "No se te ve: colocate delante de la camara", W / 2, H / 2, ROJO, 0.7, centrado=True)
+    if nadie:
+        # En el centro: cuando sale este aviso no hay nadie en pantalla, así que no tapa al jugador
+        texto(frame, "No se te ve: colocate delante de la camara", W / 2, H / 2, ROJO, 0.7, centrado=True)
+    else:
+        # Se le ve a medias: el aviso va arriba para no taparle
+        texto(frame, "No se te ve entero: alejate o centrate", W / 2, H * 0.22, ROJO, 0.6, centrado=True)
 
 
 def _color_nota(nota):
@@ -176,5 +180,9 @@ def dibujar(frame, estado, result):
     if result.pose_landmarks and estado["fase"] in (game.MENU, game.EJECUCION):
         dibujar_esqueleto(frame, result.pose_landmarks[0], None, estado["comparacion"])
     PANTALLAS[estado["fase"]](frame, estado)
-    if not estado["detectado"] and estado["fase"] not in (game.NOTA_POSE, game.RESULTADOS):
-        marco_rojo(frame)
+    if estado["fase"] in (game.NOTA_POSE, game.RESULTADOS):
+        return
+    if not estado["detectado"]:
+        marco_rojo(frame, nadie=True)
+    elif not estado.get("visible", True):
+        marco_rojo(frame, nadie=False)

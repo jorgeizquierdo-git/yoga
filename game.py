@@ -25,7 +25,7 @@ Sonidos: actualizar() devuelve en estado["eventos"] los nombres de los sonidos q
     mantener_1 ... mantener_5     uno por segundo mientras se mantiene la postura bien (cada vez más agudo)
     conseguida / tiempo_agotado   al terminar la postura
     tic                           en cada uno de los últimos TICS_FINALES segundos del tiempo límite
-    no_se_te_ve                   durante la ejecución, si no se detecta al jugador (cada AVISO_AUSENCIA_CADA s)
+    no_se_te_ve                   durante la ejecución, mientras no se vea al jugador (cada AVISO_AUSENCIA_CADA s)
     fin_partida                   al llegar a los resultados
 """
 import math
@@ -35,7 +35,7 @@ from poses import comparar_pose, cargar_postura
 from selector_dificultad import SelectorDificultad, cargar_poses_seleccion
 from utils import (T_EXPLICACION, T_LIMITE, VENTANA_PUNTUACION, GRACIA_MANTENER,
                    COBERTURA_VENTANA, T_RESULTADO_POSE, UMBRAL_APROBADO, NOMBRES_POSES,
-                   AVISO_AUSENCIA_CADA, AUSENCIA_MINIMA, TICS_FINALES)
+                   AVISO_AUSENCIA_CADA, AUSENCIA_MINIMA, TICS_FINALES, AVISAR_SI_NO_EVALUABLE, NO_EVALUABLE)
 
 MENU, EXPLICACION, EJECUCION, NOTA_POSE, RESULTADOS = (
     "menu", "explicacion", "ejecucion", "nota_pose", "resultados")
@@ -165,6 +165,10 @@ class Juego:
 
         if self.fase == EJECUCION and detectado:
             estado["comparacion"] = comparar_pose(result, pose["postura"], ancho, alto)
+        # "visible" = se le ve lo bastante para evaluar. Si solo se le ve en parte, cuenta como no visible.
+        estado["visible"] = detectado and not (
+            AVISAR_SI_NO_EVALUABLE and estado["comparacion"] is not None
+            and estado["comparacion"]["estado"] == NO_EVALUABLE)
 
         if self.fase == EXPLICACION and transcurrido >= T_EXPLICACION:
             self._fase(EJECUCION, ahora)
@@ -194,8 +198,8 @@ class Juego:
                 self._eventos.append("tic")
                 self.ultimo_tic = restante_entero
 
-            # Aviso sonoro si no se ve al jugador (no en el primer parpadeo, y como mucho cada X s)
-            if detectado:
+            # Aviso sonoro si no se ve al jugador: no en el primer parpadeo, y se repite cada X s mientras dure
+            if estado["visible"]:
                 self.ausente_desde = None
             else:
                 if self.ausente_desde is None:
