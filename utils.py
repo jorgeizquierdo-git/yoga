@@ -106,6 +106,14 @@ COLOR_PUNTO_CERCA = (0, 255, 255)              # amarillo: tol < |error| <= tol 
 COLOR_PUNTO_INCORRECTO = (0, 0, 255)           # rojo:     |error| > tol + MARGEN_CERCA, o no se pudo medir
 
 MARGEN_CERCA = 15.0      # grados por encima de la tolerancia en los que el ángulo se pinta en amarillo ("casi")
+# --- Reducción de ruido del esqueleto en tiempo real (suavizado.py) ---
+FILTRO_ACTIVO = True       # False para ver el esqueleto "crudo" de MediaPipe y comparar
+FILTRO_MIN_CUTOFF = 1.0    # Hz. Más bajo = suaviza más estando quieto (pero tarda más en llegar a la pose)
+FILTRO_BETA = 5.0          # Más alto = menos retraso cuando te mueves rápido (pero tiembla más al moverse)
+FILTRO_D_CUTOFF = 1.0      # Hz. Suavizado de la velocidad que usa el filtro; normalmente no se toca
+SALTO_MAXIMO = 0.5         # desplazamiento máximo de un punto en UN fotograma, en "troncos" (hombro-cadera)
+MANTENER_MAX_S = 0.5       # durante cuánto se ignora un salto o una caída de visibilidad antes de aceptarla
+
 ESCALA_VENTANA = 2       # la ventana del tracker se abre a este múltiplo del tamaño de la cámara (y se puede estirar)
 
 UMBRAL_APROBADO = 70.0   # puntuación global mínima (0-100) para dar la pose por buena

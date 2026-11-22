@@ -12,11 +12,15 @@ Genera (o regenera) los .json de las posturas a partir de las imágenes de media
   no se toca.
 
 Uso (desde la carpeta del repo, con el modelo descargado):
-    python regenerador_poses.py
+    python regenerador_poses.py                          -> todas las imágenes
+    python regenerador_poses.py dificil/p2               -> solo esa (se pueden poner varias)
+    python regenerador_poses.py dificil/p2 --nuevo       -> ignora el .json que hubiera y lo crea desde cero
+                                                           (pesos y ángulos relevantes de CONFIG_POSES)
 
 Si algo sale mal, los .json se recuperan con git (git checkout -- jason/).
 """
 import json
+import sys
 from pathlib import Path
 
 from registrador_poses import registrar_pose_desde_imagen
@@ -73,10 +77,10 @@ def _cargar(ruta_json):
         return json.load(f)["postura"]
 
 
-def regenerar(imagen):
+def regenerar(imagen, nuevo=False):
     clave_pose = f"{imagen.parent.name}/{imagen.stem}"
     ruta_json = CARPETA_JSON / imagen.parent.name / f"{imagen.stem}.json"
-    antigua = _cargar(ruta_json)
+    antigua = None if nuevo else _cargar(ruta_json)
     config = CONFIG_POSES.get(clave_pose, {})
 
     if antigua and antigua.get("no_regenerar"):
@@ -133,17 +137,40 @@ def regenerar(imagen):
     return f"{estado} {ruta_json} <- {imagen}{aviso}\n" + "\n".join(lineas)
 
 
-def main():
-    imagenes = _imagenes()
+def _buscar(clave_pose):
+    """"dificil/p2" (con o sin extensión) -> ruta de su imagen en media/, o None si no existe."""
+    base = CARPETA_MEDIA / Path(clave_pose).with_suffix("")
+    for ext in EXTENSIONES:
+        if base.with_suffix(ext).exists():
+            return base.with_suffix(ext)
+    return None
+
+
+def main(poses=None, nuevo=False):
+    """
+    poses: lista de "<dificultad>/<nombre>" (p. ej. ["dificil/p2"]). Si es None o vacía, se hacen todas.
+    nuevo: True para no tener en cuenta el .json existente (se crea desde cero con CONFIG_POSES).
+    """
+    if poses:
+        imagenes = []
+        for clave in poses:
+            imagen = _buscar(clave)
+            if imagen is None:
+                print(f"No existe ninguna imagen {CARPETA_MEDIA}/{clave}{{{','.join(EXTENSIONES)}}}")
+            else:
+                imagenes.append(imagen)
+    else:
+        imagenes = _imagenes()
     if not imagenes:
-        print(f"No hay imágenes en {CARPETA_MEDIA}/<dificultad>/")
+        print(f"No hay imágenes que procesar en {CARPETA_MEDIA}/<dificultad>/")
         return
     for imagen in imagenes:
-        print(regenerar(imagen))
+        print(regenerar(imagen, nuevo=nuevo))
     sin_config = [f"{i.parent.name}/{i.stem}" for i in imagenes if f"{i.parent.name}/{i.stem}" not in CONFIG_POSES]
     if sin_config:
         print("\nSin pesos específicos en CONFIG_POSES (solo PESOS_GENERALES):", ", ".join(sin_config))
 
 
 if __name__ == "__main__":
-    main()
+    argumentos = sys.argv[1:]
+    main([a for a in argumentos if not a.startswith("--")], nuevo="--nuevo" in argumentos)

@@ -182,6 +182,6 @@ if __name__ == "__main__":
         mostrar_captura(sys.argv[1])
         sys.exit()
     mostrar_json_lado_a_lado(
-        ruta_json="jason/dificil/p4.json",
-        ruta_imagen="media/dificil/p4.jpg",
+        ruta_json="jason/dificil/p2.json",
+        ruta_imagen="media/dificil/p2.jpg",
     )

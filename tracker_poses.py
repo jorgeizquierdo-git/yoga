@@ -11,10 +11,11 @@ COLOR_TEXTO, INTERVALOS_PRINT, INTERVALOS_COMPROBACION, INTERVALO_CAPTURA, CARPE
 extraer_puntos, medir_angulos, _indice)
 from poses import comparar_pose, cargar_postura
 from registrador_poses import registrar_pose_desde_imagen
+from suavizado import FiltroEsqueleto
 
 
-RUTA_POSE = "jason/facil/p4.json"     # pose con la que se compara en vivo (colores verde/rojo)
-
+RUTA_POSE = "jason/dificil/p4.json"     # pose con la que se compara en vivo (colores verde/rojo)
+# revisar medio p4, dificil mirar p1
 BaseOptions = mp.tasks.BaseOptions
 PoseLandmarker = mp.tasks.vision.PoseLandmarker
 PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
@@ -228,6 +229,7 @@ def main():
     if pose is None:
         print(f"[aviso] No existe {RUTA_POSE}: se muestra el esqueleto sin comparar con ninguna pose")
 
+    filtro = FiltroEsqueleto()
     t0 = time.monotonic()
     t_prev = t0
     ultimo_print = t0
@@ -259,6 +261,7 @@ def main():
             ahora = time.monotonic()
             timestamp_ms = int((ahora - t0) * 1000)
             result = landmarker.detect_for_video(mp_image, timestamp_ms)
+            result = filtro.aplicar(result, ahora)      # quita temblores y saltos (ver suavizado.py)
 
             tecla = cv2.waitKey(1) & 0xFF
             if tecla in (27, ord("q")):
