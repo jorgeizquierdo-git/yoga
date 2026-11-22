@@ -10,8 +10,8 @@
           "tobillo_izq"
         ],
         "objetivo": null,
-        "tol": null,
-        "peso": null
+        "tol": 10,
+        "peso": 2.0
       },
       "rodilla_der": {
         "puntos": [
@@ -30,8 +30,8 @@
           "rodilla_izq"
         ],
         "objetivo": null,
-        "tol": null,
-        "peso": null
+        "tol": 10,
+        "peso": 2.5
       },
       "cadera_der": {
         "puntos": [
@@ -49,9 +49,9 @@
           "codo_izq",
           "muneca_izq"
         ],
-        "objetivo": null,
-        "tol": null,
-        "peso": null
+        "objetivo": 171.7,
+        "tol": 10,
+        "peso": 1.0
       },
       "codo_der": {
         "puntos": [
@@ -69,9 +69,9 @@
           "hombro_izq",
           "codo_izq"
         ],
-        "objetivo": null,
-        "tol": null,
-        "peso": null
+        "objetivo": 174.6,
+        "tol": 10,
+        "peso": 2.0
       },
       "hombro_der": {
         "puntos": [
@@ -90,8 +90,8 @@
           "punta_pie_izq"
         ],
         "objetivo": null,
-        "tol": null,
-        "peso": null
+        "tol": 10,
+        "peso": 0.5
       },
       "tobillo_der": {
         "puntos": [
@@ -109,9 +109,9 @@
           "hombro_izq",
           "cadera_izq"
         ],
-        "objetivo": null,
-        "tol": null,
-        "peso": null
+        "objetivo": 131.0,
+        "tol": 10,
+        "peso": 0.5
       },
       "cabeza_tronco_der": {
         "puntos": [

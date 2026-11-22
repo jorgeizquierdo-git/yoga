@@ -1,8 +1,8 @@
 import copy
 import json
-from utils import (NO_EVALUABLE, OK, FALLO, ERROR_MAXIMO, UMBRAL_APROBADO, NOMBRES, IDX, _angulos_relevantes,
+from utils import (ERROR_MAXIMO, UMBRAL_APROBADO, NOMBRES, IDX, angulos_relevantes,
 comprobar_encuadre, puntos_necesarios, extraer_puntos, medir_angulos, PESO_POR_DEFECTO, COBERTURA_MINIMA,
-puntos_fuera_de_imagen, _indice)
+puntos_fuera_de_imagen, indice)
 
 def cargar_postura(ruta):
     with open(ruta, "r", encoding="utf-8") as f:
@@ -61,7 +61,7 @@ def comparar_posturas(observados, esperado):
     """
     detalle = {}
 
-    for clave, datos in _angulos_relevantes(esperado):
+    for clave, datos in angulos_relevantes(esperado):
         objetivo, observado = datos["objetivo"], observados.get(clave)
         error = None if observado is None else observado - objetivo
 
@@ -92,11 +92,11 @@ def comparar_posturas(observados, esperado):
         resultado["avisos"].append("No se ven bien: " + ", ".join(c.replace("_", " ") for c in sin_medir))
 
     if peso_medido <= 0 or resultado["cobertura"] < COBERTURA_MINIMA:
-        resultado["estado"] = NO_EVALUABLE
+        resultado["estado"] = "no_evaluable"
         return resultado
 
     resultado["puntuacion"] = 100.0 * sum(d["peso"] * d["nota"] for d in medidos) / peso_medido
-    resultado["estado"] = OK if resultado["puntuacion"] >= UMBRAL_APROBADO else FALLO
+    resultado["estado"] = "ok" if resultado["puntuacion"] >= UMBRAL_APROBADO else "fallo"
     return resultado
 
 
@@ -115,8 +115,8 @@ def _comparar_una_version(result, pose, ancho, alto):
 
     medidos = medir_angulos(puntos, pose, visibilidad)
     fuera = puntos_fuera_de_imagen(result)
-    for clave, datos in _angulos_relevantes(pose):
-        if any(_indice(p) in fuera for p in datos["puntos"]):
+    for clave, datos in angulos_relevantes(pose):
+        if any(indice(p) in fuera for p in datos["puntos"]):
             medidos[clave] = None                    # extrapolado por el modelo: no es de fiar
 
     resultado = comparar_posturas(medidos, pose)

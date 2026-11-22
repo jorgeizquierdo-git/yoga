@@ -37,7 +37,6 @@ CAMERA_INDEX = 0 # 1 si no te funciona el predeterminado
 
 MIN_VISIBILIDAD = 0.3 # minima visibilidad para considrerar le punto
 
-INTERVALOS_PRINT = 10 # el intervalo de tiempo para mostrar por consola los prints para debuguear. No están presentes en main.py
 INTERVALOS_COMPROBACION = 5 # el intervalo de tiempo para comprobar la postura con la seleccionada durante el debug
 
 NOMBRES_EN_PANTALLA = {"rodilla", "cadera", "tobillo", "hombro", "codo"} # Nombre de los vertices que nos interesaba analizar durante el desarrollo
