@@ -7,7 +7,7 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
 
-from utils import extraer_puntos, medir_angulos, esqueleto_a_dict, peso_de, ANGULOS
+from utils import extraer_puntos, medir_angulos, esqueleto_a_dict, peso_de, ANGULOS, MODEL_PATH
 
 
 def detectar_pose(ruta_imagen, ruta_modelo):
@@ -101,7 +101,7 @@ def registrar_pose_desde_imagen(
 if __name__ == "__main__":
     registrar_pose_desde_imagen( #deberías cabiar los valores de las rutas si vas a cambiar de representacón
         ruta_imagen="media/dificil/p11.jpg",
-        ruta_modelo="models/pose_landmarker_full.task",
+        ruta_modelo=MODEL_PATH,
         ruta_salida_json="jason/dificil/p11.json",
         nombre_pose="ejemplo",
         articulaciones_relevantes=list(ANGULOS["angulos"].keys()),

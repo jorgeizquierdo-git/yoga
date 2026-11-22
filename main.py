@@ -13,7 +13,7 @@ import cv2
 import mediapipe as mp
 
 # Ruta del modelo
-MODEL_PATH = "models/pose_landmarker_full.task"
+from utils import MODEL_PATH   # un único sitio para elegir el modelo
 CAMERA_INDEX = 0 
 MIN_VISIBILITY = 0.1 
 

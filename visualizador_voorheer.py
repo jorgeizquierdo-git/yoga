@@ -110,7 +110,7 @@ def mostrar_json_lado_a_lado(
     max_alto=900,
 ):
     if ruta_modelo is None:
-        ruta_modelo = "models/pose_landmarker_full.task"
+        ruta_modelo = utils.MODEL_PATH
 
     postura = cargar_postura_json(ruta_json)
     imagen_bgr, resultado = detectar_landmarks_imagen(ruta_imagen, ruta_modelo)

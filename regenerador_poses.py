@@ -39,21 +39,26 @@ PESOS_GENERALES = {"tobillo": 0.5, "cabeza_tronco": 0.5}
 CONFIG_POSES = {
     # --- fácil ---
     "facil/default": {"pesos": {"hombro": 2, "codo": 1.5}},                             # T: brazos en cruz
+    "facil/p1":      {"pesos": {"rodilla": 3, "cadera": 2, "hombro": 2}},               # árbol
     "facil/p2":      {"pesos": {"rodilla": 2, "hombro": 2, "cadera": 1.5}},             # guerrero II
     "facil/p3":      {"pesos": {"rodilla": 2.5, "cadera": 2.5, "hombro": 1.5}},         # silla
     "facil/p4":      {"pesos": {"cadera": 3, "hombro": 2, "rodilla": 1.5}},             # perro boca abajo
     # --- medio ---
-    "medio/default": {"pesos": {"rodilla": 2, "cadera": 2}},                            # zancada con estiramiento
-    "medio/p1":      {"pesos": {"cadera": 2.5, "rodilla": 2, "hombro": 2}},             # niño (balasana)
+    # niño, de perfil: el lado izquierdo de la foto está tapado y su esqueleto no es de fiar
+    "medio/default": {"pesos": {"cadera": 2.5, "rodilla": 2, "hombro": 2},
+                      "relevantes": ["rodilla_der", "cadera_der", "codo_der", "hombro_der", "tobillo_der",
+                                     "cabeza_tronco_der"]},
+    "medio/p1":      {"pesos": {"cadera": 3, "rodilla": 2, "hombro": 1.5}},             # puente
     "medio/p2":      {"pesos": {"cadera": 3, "hombro": 2, "codo": 1.5, "rodilla": 0.5}},  # cobra: piernas rectas valen poco
     "medio/p3":      {"pesos": {"cadera": 2, "hombro": 2, "rodilla": 1.5}},             # triángulo
-    "medio/p4":      {"pesos": {"rodilla": 3, "cadera": 2, "hombro": 1.5}},             # árbol
+    "medio/p4":      {"pesos": {"rodilla": 2, "cadera": 2, "hombro": 1}},               # lagarto / zancada baja
     # --- difícil ---
     "dificil/default": {"pesos": {"cadera": 3, "hombro": 2, "rodilla": 1.5}},           # media luna
-    "dificil/p1":      {"pesos": {"cadera": 3, "rodilla": 2, "hombro": 1.5}},           # puente
-    "dificil/p3":      {"pesos": {"cadera": 3, "hombro": 1.5, "rodilla": 1.5}},         # invertida con pierna arriba
+    "dificil/p1":      {"pesos": {"rodilla": 2, "cadera": 2, "codo": 1.5, "hombro": 1.5}},  # zancada cogiendo el pie
+    "dificil/p2":      {"pesos": {"rodilla": 2.5, "cadera": 2}},                        # salto
+    # invertida: brazos y cabeza salen colapsados en la foto -> cuentan poco
+    "dificil/p3":      {"pesos": {"cadera": 3, "rodilla": 2, "hombro": 0.5, "codo": 0.5, "cabeza_tronco": 0.25}},
     "dificil/p4":      {"pesos": {"cadera": 2.5, "hombro": 2.5, "rodilla": 1.5}},       # wild thing / plancha lateral
-    "dificil/propuesta-nueva-postura": {"pesos": {"rodilla": 2, "cadera": 2}},          # lagarto / zancada baja
 }
 
 
@@ -78,7 +83,10 @@ def regenerar(imagen):
         return f"SALTADA     {ruta_json} (no_regenerar)"
 
     if antigua:
-        relevantes = [c for c, d in antigua["angulos"].items() if d.get("objetivo") is not None]
+        # Relevante = tiene "tol" (aunque la otra vez no se pudiera medir: con otro modelo puede que sí se mida).
+        # Los que se quitan a mano llevan "tol": null y no vuelven.
+        relevantes = [c for c, d in antigua["angulos"].items()
+                      if d.get("objetivo") is not None or d.get("tol") is not None]
         if not relevantes:            # todos salieron "no evaluable" la otra vez: se reintenta con todos
             relevantes = list(ANGULOS["angulos"].keys())
     else:
