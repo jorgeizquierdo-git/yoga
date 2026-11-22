@@ -118,6 +118,27 @@ ESCALA_VENTANA = 2       # la ventana del tracker se abre a este múltiplo del t
 
 UMBRAL_APROBADO = 70.0   # puntuación global mínima (0-100) para dar la pose por buena
 
+# --- Juego (game.py / ui.py / main.py) ---
+T_EXPLICACION = 3          # s mostrando la foto de la pose a pantalla grande
+# Tiempo máximo para hacer cada postura, según la dificultad: las difíciles necesitan más para colocarse
+# (equilibrio, piernas...). Se puntúa desde el principio y la postura termina antes en cuanto se mantiene
+# >= UMBRAL_APROBADO durante VENTANA_PUNTUACION s seguidos.
+T_LIMITE = {"facil": 30, "medio": 45, "dificil": 60}
+VENTANA_PUNTUACION = 5     # nota de la pose = media del MEJOR tramo de estos segundos seguidos
+GRACIA_MANTENER = 0.5      # s por debajo del umbral que se perdonan al contar cuánto lleva mantenida la pose
+COBERTURA_VENTANA = 0.5    # fracción mínima de fotogramas evaluables en un tramo para que ese tramo cuente
+T_RESULTADO_POSE = 2       # s mostrando la nota de una pose antes de pasar a la siguiente
+
+# Nombres que se muestran en pantalla (sin tildes: OpenCV no las dibuja). Si falta uno, se usa "Postura N".
+NOMBRES_POSES = {
+    "facil/default": "T", "facil/p1": "Arbol", "facil/p2": "Guerrero II", "facil/p3": "Silla",
+    "facil/p4": "Perro boca abajo",
+    "medio/default": "Balasana", "medio/p1": "Puente", "medio/p2": "Cobra", "medio/p3": "Triangulo",
+    "medio/p4": "Lagarto",
+    "dificil/default": "Media luna", "dificil/p1": "Zancada con estiramiento", "dificil/p2": "Invertida plegada",
+    "dificil/p3": "Invertida con pierna arriba", "dificil/p4": "Wild thing",
+}
+
 # Ponderaciones: cada ángulo de una postura puede llevar "peso" en su .json (si no lo lleva, vale PESO_POR_DEFECTO).
 # La puntuación es la media PONDERADA de las notas de los ángulos medidos.
 PESO_POR_DEFECTO = 1.0

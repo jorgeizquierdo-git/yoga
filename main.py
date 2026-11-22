@@ -1,9 +1,13 @@
-"""Captura la cámara y dibuja el esqueleto (33 landmarks) con MediaPipe Pose Landmarker.
+"""Juego de posturas de yoga con MediaPipe Pose Landmarker.
 
-Uso (desde la carpeta del repo, con el entorno activado y los modelos descargados):
-    python captura_esqueleto.py
+Uso (desde la carpeta del repo, con el entorno activado, los modelos descargados y los .json generados):
+    python main.py
 
-Teclas: ESC o q -> salir
+Flujo: menú (haz la postura de una esquina para elegir dificultad) -> por cada postura de esa dificultad:
+explicación, preparación y ejecución -> resultados con la nota de cada postura y la media.
+La lógica está en game.py y el dibujo en ui.py; los tiempos se configuran en utils.py.
+
+Teclas: ESC o q -> salir | m -> volver al menú | ENTER o espacio (en resultados) -> volver al menú
 """
 import os
 import sys
@@ -12,46 +16,23 @@ import time
 import cv2
 import mediapipe as mp
 
-# Ruta del modelo
-from utils import MODEL_PATH   # un único sitio para elegir el modelo
-CAMERA_INDEX = 0 
-MIN_VISIBILITY = 0.1 
+import ui
+from game import Juego, RESULTADOS
+from suavizado import FiltroEsqueleto
+from utils import MODEL_PATH, CAMERA_INDEX, ESCALA_VENTANA
 
 BaseOptions = mp.tasks.BaseOptions
 PoseLandmarker = mp.tasks.vision.PoseLandmarker
 PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
 RunningMode = mp.tasks.vision.RunningMode
-
-
-def _cargar_conexiones():
-    """Pares (i, j) de landmarks unidos por un hueso. Compatible con mediapipe 0.10.x y 1.x."""
-    try:                                    # mediapipe >= 1.0 (mp.solutions ya no existe)
-        conexiones = mp.tasks.vision.PoseLandmarksConnections.POSE_LANDMARKS
-        return [(c.start, c.end) for c in conexiones]
-    except AttributeError:                  # mediapipe 0.10.x
-        return list(mp.solutions.pose.POSE_CONNECTIONS)
-
-
-POSE_CONNECTIONS = _cargar_conexiones()
-
-
-def dibujar_esqueleto(frame, landmarks):
-    """Dibuja huesos y articulaciones. landmarks: lista de 33 puntos normalizados (0-1)."""
-    h, w = frame.shape[:2]
-    puntos = [(int(p.x * w), int(p.y * h)) for p in landmarks]
-    visibles = [p.visibility >= MIN_VISIBILITY for p in landmarks]
-
-    for i, j in POSE_CONNECTIONS:
-        if visibles[i] and visibles[j]:
-            cv2.line(frame, puntos[i], puntos[j], (255, 0, 0), 2)
-    for k, (x, y) in enumerate(puntos):
-        if visibles[k]:
-            cv2.circle(frame, (x, y), 4, (0, 255, 0), -1)
+VENTANA = "Yoga"
 
 
 def main():
     if not os.path.exists(MODEL_PATH):
         sys.exit(f"No se encuentra el modelo en {MODEL_PATH}.\nEjecuta antes: python download_models.py")
+    if not os.path.isdir("jason"):
+        sys.exit("No existe la carpeta jason/. Genera antes las posturas: python regenerador_poses.py")
 
     cap = cv2.VideoCapture(CAMERA_INDEX)
     if not cap.isOpened():
@@ -63,8 +44,12 @@ def main():
         num_poses=1,
     )
 
+    juego = Juego()
+    filtro = FiltroEsqueleto()
+    cv2.namedWindow(VENTANA, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
+    ventana_ajustada = False
     t0 = time.monotonic()
-    t_prev = t0
+
     with PoseLandmarker.create_from_options(options) as landmarker:
         while True:
             ok, frame = cap.read()
@@ -73,33 +58,33 @@ def main():
                 break
 
             frame = cv2.flip(frame, 1)                       # efecto espejo
+            alto, ancho = frame.shape[:2]
+            if not ventana_ajustada:
+                cv2.resizeWindow(VENTANA, ancho * ESCALA_VENTANA, alto * ESCALA_VENTANA)
+                ventana_ajustada = True
+
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)     # OpenCV da BGR; MediaPipe espera RGB
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-
-            # Timestamp en ms, creciente y basado en el reloj real
-            timestamp_ms = int((time.monotonic() - t0) * 1000)
-            result = landmarker.detect_for_video(mp_image, timestamp_ms)
-
-            if result.pose_landmarks:
-                dibujar_esqueleto(frame, result.pose_landmarks[0])
-            else:
-                cv2.putText(frame, "No se detecta ninguna persona", (10, 60),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
-
-            # FPS
             ahora = time.monotonic()
-            fps = 1.0 / max(ahora - t_prev, 1e-6)
-            t_prev = ahora
-            cv2.putText(frame, f"FPS: {fps:.0f}", (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+            result = landmarker.detect_for_video(mp_image, int((ahora - t0) * 1000))
+            result = filtro.aplicar(result, ahora)           # quita temblores y saltos (suavizado.py)
 
-            cv2.imshow("Esqueleto", frame)
+            estado = juego.actualizar(result, ancho, alto, ahora)
+            ui.dibujar(frame, estado, result)
+            cv2.imshow(VENTANA, frame)
+
             tecla = cv2.waitKey(1) & 0xFF
             if tecla in (27, ord("q")):
                 break
+            if tecla == ord("m") or (estado["fase"] == RESULTADOS and tecla in (13, 32)):
+                juego.ir_al_menu()
 
     cap.release()
     cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    main()
 
 
 if __name__ == "__main__":

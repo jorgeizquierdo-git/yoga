@@ -176,8 +176,6 @@ def mostrar_captura(ruta_json, ruta_salida_img=None, mostrar=True):
 
 
 if __name__ == "__main__":
-    # python visualizador_voorheer.py jason/capturas/captura_HHMMSS.json  -> muestra esa captura
-    # python visualizador_voorheer.py                                     -> comparativa de siempre
     if len(sys.argv) > 1:
         mostrar_captura(sys.argv[1])
         sys.exit()
