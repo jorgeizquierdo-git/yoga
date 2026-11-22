@@ -7,6 +7,8 @@ Flujo: menú (haz la postura de una esquina para elegir dificultad) -> por cada 
 explicación, preparación y ejecución -> resultados con la nota de cada postura y la media.
 La lógica está en game.py y el dibujo en ui.py; los tiempos se configuran en utils.py.
 
+Sonidos: los .wav de soniditos/ (sonidos.py). Si no hay audio disponible, el juego va en silencio.
+
 Teclas: ESC o q -> salir | m -> volver al menú | ENTER o espacio (en resultados) -> volver al menú
 """
 import os
@@ -18,6 +20,7 @@ import mediapipe as mp
 
 import ui
 from game import Juego, RESULTADOS
+from sonidos import Sonidos
 from suavizado import FiltroEsqueleto
 from utils import MODEL_PATH, CAMERA_INDEX, ESCALA_VENTANA
 
@@ -45,6 +48,7 @@ def main():
     )
 
     juego = Juego()
+    sonidos = Sonidos()
     filtro = FiltroEsqueleto()
     cv2.namedWindow(VENTANA, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
     ventana_ajustada = False
@@ -70,6 +74,7 @@ def main():
             result = filtro.aplicar(result, ahora)           # quita temblores y saltos (suavizado.py)
 
             estado = juego.actualizar(result, ancho, alto, ahora)
+            sonidos.reproducir_eventos(estado["eventos"])
             ui.dibujar(frame, estado, result)
             cv2.imshow(VENTANA, frame)
 
@@ -81,10 +86,6 @@ def main():
 
     cap.release()
     cv2.destroyAllWindows()
-
-
-if __name__ == "__main__":
-    main()
 
 
 if __name__ == "__main__":

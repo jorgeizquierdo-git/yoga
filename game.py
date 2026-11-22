@@ -17,13 +17,25 @@ Nota de una pose = media del MEJOR tramo de VENTANA_PUNTUACION s seguidos dentro
     - hacerlo muy bien un momento no basta: 3 s a 95 y 2 s a 30 dan (3*95 + 2*30) / 5 = 69, suspenso.
 Fotogramas sin persona detectada cuentan como 0; los "no evaluables" (persona vista pero sin suficientes
 ángulos medibles) no cuentan ni a favor ni en contra.
+
+Sonidos: actualizar() devuelve en estado["eventos"] los nombres de los sonidos que tocan en ese fotograma
+(main.py los reproduce con sonidos.py; son los .wav de soniditos/):
+    dificultad_elegida            al elegir dificultad en el menú
+    nueva_postura                 al empezar cada postura
+    mantener_1 ... mantener_5     uno por segundo mientras se mantiene la postura bien (cada vez más agudo)
+    conseguida / tiempo_agotado   al terminar la postura
+    tic                           en cada uno de los últimos TICS_FINALES segundos del tiempo límite
+    no_se_te_ve                   durante la ejecución, si no se detecta al jugador (cada AVISO_AUSENCIA_CADA s)
+    fin_partida                   al llegar a los resultados
 """
+import math
 import os
 
 from poses import comparar_pose, cargar_postura
 from selector_dificultad import SelectorDificultad, cargar_poses_seleccion
 from utils import (T_EXPLICACION, T_LIMITE, VENTANA_PUNTUACION, GRACIA_MANTENER,
-                   COBERTURA_VENTANA, T_RESULTADO_POSE, UMBRAL_APROBADO, NOMBRES_POSES)
+                   COBERTURA_VENTANA, T_RESULTADO_POSE, UMBRAL_APROBADO, NOMBRES_POSES,
+                   AVISO_AUSENCIA_CADA, AUSENCIA_MINIMA, TICS_FINALES)
 
 MENU, EXPLICACION, EJECUCION, NOTA_POSE, RESULTADOS = (
     "menu", "explicacion", "ejecucion", "nota_pose", "resultados")
@@ -81,6 +93,7 @@ class Juego:
     def __init__(self, carpeta_json="jason", carpeta_media="media"):
         self.carpeta_json, self.carpeta_media = carpeta_json, carpeta_media
         self.selector = SelectorDificultad(cargar_poses_seleccion(carpeta_json))
+        self._eventos = []
         self.ir_al_menu()
 
     # --- cambios de fase -------------------------------------------------------------------------
@@ -90,6 +103,7 @@ class Juego:
         self.dificultad, self.partida, self.indice, self.resultados = None, [], 0, []
 
     def _empezar(self, dificultad, ahora):
+        self._eventos.append("dificultad_elegida")
         self.dificultad = dificultad
         self.partida = cargar_partida(dificultad, self.carpeta_json, self.carpeta_media)
         self.indice, self.resultados = 0, []
@@ -101,11 +115,19 @@ class Juego:
 
     def _fase(self, fase, ahora):
         self.fase, self.t_fase = fase, ahora
-        if fase == EJECUCION:
+        if fase == EXPLICACION:
+            self._eventos.append("nueva_postura")
+        elif fase == RESULTADOS:
+            self._eventos.append("fin_partida")
+        elif fase == EJECUCION:
             self.muestras = []                   # (segundos desde el inicio de la ejecución, puntuación)
             self.mantener_inicio = self.mantener_ultimo_ok = None
+            self.segundos_sonados = 0            # cuántos "mantener_N" han sonado en el tramo actual
+            self.ultimo_tic = None               # último segundo de la cuenta atrás que ha hecho "tic"
+            self.ausente_desde = self.ultimo_aviso_ausencia = None
 
-    def _terminar_pose(self, ahora):
+    def _terminar_pose(self, ahora, conseguida):
+        self._eventos.append("conseguida" if conseguida else "tiempo_agotado")
         pose = self.partida[self.indice]
         self.resultados.append({"nombre": pose["nombre"], "clave": pose["clave"],
                                 "nota": mejor_ventana(self.muestras)})
@@ -114,6 +136,12 @@ class Juego:
     # --- un fotograma ----------------------------------------------------------------------------
     def actualizar(self, result, ancho, alto, ahora):
         """Avanza el juego con el esqueleto de este fotograma y devuelve el estado que ui.py dibuja."""
+        self._eventos = []
+        estado = self._actualizar(result, ancho, alto, ahora)
+        estado["eventos"] = self._eventos
+        return estado
+
+    def _actualizar(self, result, ancho, alto, ahora):
         detectado = bool(result.pose_landmarks)
         estado = {"fase": self.fase, "detectado": detectado, "dificultad": self.dificultad,
                   "comparacion": None, "restante": None, "mantenido": 0.0, "pose": None,
@@ -151,10 +179,36 @@ class Juego:
                 self.mantener_ultimo_ok = ahora
             elif self.mantener_inicio is not None and ahora - self.mantener_ultimo_ok > GRACIA_MANTENER:
                 self.mantener_inicio = self.mantener_ultimo_ok = None
+                self.segundos_sonados = 0                        # se ha perdido: la subida vuelve a empezar
             if self.mantener_inicio is not None:
                 estado["mantenido"] = self.mantener_ultimo_ok - self.mantener_inicio
-            if estado["mantenido"] >= VENTANA_PUNTUACION or transcurrido >= self._duracion(EJECUCION):
-                self._terminar_pose(ahora)
+                # Un pitido al empezar cada segundo mantenido: mantener_1 a los 0 s, ..., mantener_5 a los 4 s
+                segundo = int(estado["mantenido"]) + 1
+                if segundo > self.segundos_sonados and segundo <= VENTANA_PUNTUACION:
+                    self._eventos.append(f"mantener_{min(segundo, 5)}")
+                    self.segundos_sonados = segundo
+
+            # Cuenta atrás: "tic" al entrar en cada uno de los últimos segundos
+            restante_entero = math.ceil(estado["restante"])
+            if 0 < restante_entero <= TICS_FINALES and restante_entero != self.ultimo_tic:
+                self._eventos.append("tic")
+                self.ultimo_tic = restante_entero
+
+            # Aviso sonoro si no se ve al jugador (no en el primer parpadeo, y como mucho cada X s)
+            if detectado:
+                self.ausente_desde = None
+            else:
+                if self.ausente_desde is None:
+                    self.ausente_desde = ahora
+                if ahora - self.ausente_desde >= AUSENCIA_MINIMA and (
+                        self.ultimo_aviso_ausencia is None or ahora - self.ultimo_aviso_ausencia >= AVISO_AUSENCIA_CADA):
+                    self._eventos.append("no_se_te_ve")
+                    self.ultimo_aviso_ausencia = ahora
+
+            if estado["mantenido"] >= VENTANA_PUNTUACION:
+                self._terminar_pose(ahora, conseguida=True)
+            elif transcurrido >= self._duracion(EJECUCION):
+                self._terminar_pose(ahora, conseguida=False)
 
         elif self.fase == NOTA_POSE:
             estado["nota"] = self.resultados[-1]["nota"]

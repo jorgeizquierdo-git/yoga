@@ -129,6 +129,14 @@ GRACIA_MANTENER = 0.5      # s por debajo del umbral que se perdonan al contar c
 COBERTURA_VENTANA = 0.5    # fracción mínima de fotogramas evaluables en un tramo para que ese tramo cuente
 T_RESULTADO_POSE = 2       # s mostrando la nota de una pose antes de pasar a la siguiente
 
+# --- Sonidos (sonidos.py) ---
+SONIDOS_ACTIVOS = True     # False para jugar en silencio
+CARPETA_SONIDOS = "soniditos"
+VOLUMEN_SONIDOS = 1.0      # multiplica el volumen de los .wav (0-1; ya vienen al 40 %)
+AVISO_AUSENCIA_CADA = 3.0  # s entre zumbidos de "no se te ve" (para que no agobie)
+AUSENCIA_MINIMA = 0.5      # s sin detectar al jugador antes del primer zumbido (evita avisos por parpadeos)
+TICS_FINALES = 3           # "tic" en cada uno de los últimos N segundos del tiempo límite
+
 # Nombres que se muestran en pantalla (sin tildes: OpenCV no las dibuja). Si falta uno, se usa "Postura N".
 NOMBRES_POSES = {
     "facil/default": "T", "facil/p1": "Arbol", "facil/p2": "Guerrero II", "facil/p3": "Silla",
