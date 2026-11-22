@@ -64,7 +64,7 @@ def main():
             frame = cv2.flip(frame, 1)                       # efecto espejo
             alto, ancho = frame.shape[:2]
             if not ventana_ajustada:
-                cv2.resizeWindow(VENTANA, ancho * ESCALA_VENTANA, alto * ESCALA_VENTANA)
+                cv2.resizeWindow(VENTANA, ancho * 2, alto * 2)
                 ventana_ajustada = True
 
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)     # OpenCV da BGR; MediaPipe espera RGB

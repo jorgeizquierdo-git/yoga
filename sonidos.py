@@ -63,7 +63,7 @@ class Sonidos:
             return
         datos, frecuencia = self.sonidos[nombre]
         try:
-            sd.play(datos * VOLUMEN_SONIDOS, frecuencia)      # no bloquea
+            sd.play(datos, frecuencia)      # no bloquea
         except Exception as e:                                # p. ej. sin dispositivo de salida
             print(f"[sonidos] Error al reproducir ({e}): se desactiva el sonido")
             self.activos = False

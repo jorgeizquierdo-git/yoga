@@ -166,8 +166,7 @@ class Juego:
         if self.fase == EJECUCION and detectado:
             estado["comparacion"] = comparar_pose(result, pose["postura"], ancho, alto)
         # "visible" = se le ve lo bastante para evaluar. Si solo se le ve en parte, cuenta como no visible.
-        estado["visible"] = detectado and not (
-            AVISAR_SI_NO_EVALUABLE and estado["comparacion"] is not None
+        estado["visible"] = detectado and not (estado["comparacion"] is not None
             and estado["comparacion"]["estado"] == NO_EVALUABLE)
 
         if self.fase == EXPLICACION and transcurrido >= T_EXPLICACION:
