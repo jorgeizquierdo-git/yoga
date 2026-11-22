@@ -1,17 +1,13 @@
 import os
 import time
-from datetime import datetime
-
 import cv2
 import mediapipe as mp
-
 from utils import (
     MIN_VISIBILIDAD, CAMERA_INDEX, MODEL_PATH, NOMBRES, ANGULOS, MARGEN_CERCA, NOMBRES_EN_PANTALLA, COLOR_HUESO, COLOR_TEXTO, 
     COLOR_PUNTO_PREDETERMINADO, COLOR_PUNTO_CORRECTO, COLOR_PUNTO_CERCA, COLOR_PUNTO_INCORRECTO, INTERVALOS_COMPROBACION, 
     extraer_puntos, medir_angulos, indice
 )
 from poses import comparar_pose, cargar_postura
-from registrador_poses import registrar_pose_desde_imagen
 from suavizado import FiltroEsqueleto
 
 RUTA_POSE = "jason/medio/default.json"

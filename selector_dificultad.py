@@ -1,78 +1,79 @@
-"""
-Menú de dificultad por postura: el jugador elige la dificultad HACIENDO la pose "default" de esa carpeta
-(jason/<dificultad>/default.json) y manteniéndola.
-
-Para que no se elija una dificultad sin querer (la de fácil es una T, muy fácil de hacer de pasada):
-    - hay que superar UMBRAL_SELECCION (más exigente que el del juego, UMBRAL_APROBADO),
-    - y mantenerlo SEGUNDOS_SELECCION seguidos.
-Si la puntuación cae por debajo un instante (ruido del modelo), se perdona hasta GRACIA_SELECCION segundos;
-si cae más, o se pasa a otra pose, el contador vuelve a 0.
-
-Uso (cada frame):
-    selector = SelectorDificultad(cargar_poses_seleccion())
-    estado = selector.actualizar(result, ancho, alto, time.monotonic())
-    if estado["elegida"]:
-        dificultad = estado["elegida"]          # "facil", "medio" o "dificil"
-"""
 import os
-
 from poses import comparar_pose, cargar_postura
 
+
 DIFICULTADES = ("facil", "medio", "dificil")
-UMBRAL_SELECCION = 75.0      # puntuación mínima (0-100) para que cuente como "haciendo" la pose del menú
-SEGUNDOS_SELECCION = 3.0     # cuánto hay que mantenerla para elegir
-GRACIA_SELECCION = 0.5       # segundos que se perdonan por debajo del umbral sin reiniciar el contador
+UMBRAL_SELECCION = 75.0 # Nuevo umbral de puntaje para seleccionar. Así, evitamos que haga posturas "por suerte" o sin querer
+SEGUNDOS_SELECCION = 3.0
+GRACIA_SELECCION = 0.5 # segundos por debajo del umbral que se perdonan sin reiniciar el contador
 
 
 def cargar_poses_seleccion(carpeta="jason"):
-    """{dificultad: postura} con las default.json que existan."""
+    """
+    Carga las posturas default de cada dificultad. Sinceramente, no hay mucha
+    magia aquí. Solamente que son las 11 de la noche y quiero dormir
+    """
     poses = {}
     for dificultad in DIFICULTADES:
         ruta = os.path.join(carpeta, dificultad, "default.json")
+        
         if os.path.exists(ruta):
             poses[dificultad] = cargar_postura(ruta)
+
     return poses
 
 
 class SelectorDificultad:
-    def __init__(self, poses, umbral=UMBRAL_SELECCION, segundos=SEGUNDOS_SELECCION, gracia=GRACIA_SELECCION):
+    """
+    Basandonos en soniditos.py usamos tambien una clase para las dificultades.
+    """
+    def __init__(self, poses):
+        """
+        Aquí ya recibe las posiciones enteras
+        """
         self.poses = poses
-        self.umbral, self.segundos, self.gracia = umbral, segundos, gracia
         self.reiniciar()
 
     def reiniciar(self):
-        self.candidata = None        # dificultad cuya pose se está manteniendo
-        self.inicio = None           # instante en que empezó a mantenerla
-        self.ultimo_ok = None        # último instante en que estuvo por encima del umbral
-        self.elegida = None
+        self.candidata = None # dificultad cuya postura se está manteniendo
+        self.inicio = None
+        self.ultimo_ok = None # último momento en que estuvo por encima del umbral
+        self.elegida = None # dificultad definitivamente elegida
 
     def actualizar(self, result, ancho, alto, ahora):
         """
-        Evalúa el frame contra las poses del menú y avanza el contador. `ahora` en segundos (time.monotonic()).
-        Devuelve {"puntuaciones": {dif: punt o None}, "candidata", "progreso" (0-1), "elegida" (o None)}.
+        Compara el frame con las posturas del menú y avanza el contador. 2x1 básicamente
         """
         puntuaciones = {}
         for dificultad, pose in self.poses.items():
             puntuaciones[dificultad] = comparar_pose(result, pose, ancho, alto)["puntuacion"] if result.pose_landmarks else None
 
         if self.elegida is None:
-            validas = {d: p for d, p in puntuaciones.items() if p is not None and p >= self.umbral}
+            validas = {dif: punto for dif, punto in puntuaciones.items() if punto is not None and punto >= UMBRAL_SELECCION}
             mejor = max(validas, key=validas.get) if validas else None
 
-            if mejor is not None and mejor == self.candidata:
-                self.ultimo_ok = ahora                                   # sigue con la misma: acumula
-            elif mejor is not None:
-                self.candidata, self.inicio, self.ultimo_ok = mejor, ahora, ahora   # empieza otra: desde 0
-            elif self.candidata is not None and ahora - self.ultimo_ok > self.gracia:
-                self.candidata, self.inicio, self.ultimo_ok = None, None, None      # la ha soltado
+            if mejor is not None and mejor == self.candidata: # sigue con la misma candidata
+                self.ultimo_ok = ahora
 
-            if self.candidata is not None and self.ultimo_ok - self.inicio >= self.segundos:
+            elif mejor is not None: # Hay nuevo candidato. 
+                self.candidata, self.inicio, self.ultimo_ok = mejor, ahora, ahora
+
+            elif self.candidata is not None and ahora - self.ultimo_ok > GRACIA_SELECCION: # descarta la que tenias como candidata si superas el umbral de tiempo
+                self.candidata, self.inicio, self.ultimo_ok = None, None, None
+
+            if self.candidata is not None and self.ultimo_ok - self.inicio >= SEGUNDOS_SELECCION: # si la candidata se mantuvo lo suficiente, se selecciona definitivamente
                 self.elegida = self.candidata
 
         progreso = 0.0
         if self.elegida is not None:
             progreso = 1.0
+        
         elif self.candidata is not None:
-            progreso = min(1.0, (self.ultimo_ok - self.inicio) / self.segundos)
-        return {"puntuaciones": puntuaciones, "candidata": self.candidata, "progreso": progreso,
-                "elegida": self.elegida}
+            progreso = min(1.0, (self.ultimo_ok - self.inicio) / SEGUNDOS_SELECCION)
+
+        return {
+            "puntuaciones": puntuaciones,
+            "candidata": self.candidata,
+            "progreso": progreso, # Progreso para seleccionarla. Por eso, si elegida is not None, proceso = 1
+            "elegida": self.elegida
+        }

@@ -79,7 +79,7 @@ def regenerar(imagen, nuevo=False):
             pesos={**PESOS_GENERALES, **config.get("pesos", {})},
         )
     except ValueError as e:
-        return f"ERROR {imagen}: {e}" if antigua else ""
+        return f"ERROR {imagen}: {e}"
 
     angulos = contenido["postura"]["angulos"]
     if antigua: # se respetan la tolerancia y el peso que ya tuviera cada ángulo

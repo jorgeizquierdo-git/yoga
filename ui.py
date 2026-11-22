@@ -1,188 +1,247 @@
-"""
-Interfaz gráfica para el juego. Posiblemente sea un código corto, pero podemos aprovechar (en caso de tener tiempo), de añadir funcionalidades de ayuda
-tales como "puntos de apoyo" (como guía para las posturas) o seleccionar con posturas (creo que es más original) las diferentes dificultades del juego.
-
-dibujar(frame, estado, result) pinta encima del fotograma de la cámara lo que toque según la fase del juego
-(estado = lo que devuelve Juego.actualizar). Todo se dibuja con OpenCV, sin tildes (no las dibuja).
-"""
+import os
 import cv2
 import numpy as np
-
-import game
 from tracker_poses import dibujar_esqueleto
 from utils import UMBRAL_APROBADO, VENTANA_PUNTUACION
 
-BLANCO, NEGRO = (255, 255, 255), (0, 0, 0)
-VERDE, ROJO, AMARILLO, GRIS = (0, 220, 0), (0, 0, 255), (0, 220, 255), (150, 150, 150)
-ESQUINAS_MENU = {"facil": "arriba_izq", "medio": "arriba_dcha", "dificil": "abajo_dcha"}   # abajo_izq: salir
-TAMANO_MINIATURA = 0.22      # ancho de las miniaturas (fracción del ancho de la imagen)
+ESQUINAS_MENU = {"facil": "arriba_izq", "medio": "arriba_dcha", "dificil": "abajo_dcha"}
+TAMANO_MINIATURA = 0.22
 
-_cache_imagenes = {}
+imagenes_cargadas = {}
 
 
-def _imagen(ruta):
-    if ruta not in _cache_imagenes:
-        _cache_imagenes[ruta] = cv2.imread(ruta) if ruta else None
-    return _cache_imagenes[ruta]
+def cargar_imagen(ruta):
+    """
+    Dudo mucho que tenga que explicarlo
+    """
+    if ruta not in imagenes_cargadas:
+        imagenes_cargadas[ruta] = cv2.imread(ruta) if ruta else None
+
+    return imagenes_cargadas[ruta]
 
 
-def _escala(frame):
+def imagen_default(dificultad):
+    """
+    Carga solamente las imágenes llamadas "default". Son las que usamos para comenzar 
+    la partida de dicha dificultad
+    """
+    for extension in (".jpg", ".jpeg", ".png"):
+        ruta = os.path.join("media", dificultad, "default" + extension)
+        if os.path.exists(ruta):
+            return ruta
+
+    return None
+
+
+def escala(frame):
+    """
+    Escala
+    """
     return frame.shape[1] / 640.0
 
 
-def texto(frame, txt, x, y, color=BLANCO, tam=0.7, grosor=2, centrado=False):
-    """Texto con contorno negro para que se lea sobre cualquier fondo. tam es relativo a 640 px de ancho."""
-    tam *= _escala(frame)
-    grosor = max(1, int(round(grosor * _escala(frame))))
+def texto(frame, txt, x, y, color=(255, 255, 255), tam=0.7, grosor=2, centrado=False):
+    """
+    Texto con contorno negro para que se lea sobre cualquier fondo, porque blanco vimos que 
+    no es tan buena opción si tu casa es blanca
+    """
+    tam *= escala(frame)
+    grosor = max(1, int(round(grosor * escala(frame))))
     if centrado:
-        (w, _), _ = cv2.getTextSize(txt, cv2.FONT_HERSHEY_SIMPLEX, tam, grosor)
-        x = int(x - w / 2)
-    cv2.putText(frame, txt, (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, tam, NEGRO, grosor + 3, cv2.LINE_AA)
+        (ancho_texto, _), _ = cv2.getTextSize(txt, cv2.FONT_HERSHEY_SIMPLEX, tam, grosor)
+        x = x - ancho_texto / 2
+
+    cv2.putText(frame, txt, (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, tam, (0, 0, 0), grosor + 3, cv2.LINE_AA)
     cv2.putText(frame, txt, (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, tam, color, grosor, cv2.LINE_AA)
 
 
-def oscurecer(frame, cantidad=0.6):
+def oscurecer(frame, cantidad):
     frame[:] = (frame * (1 - cantidad)).astype(np.uint8)
 
 
-def pegar(frame, img, x, y, ancho, borde=None):
-    """Pega `img` reescalada a `ancho` con su esquina superior izquierda en (x, y). Devuelve (x, y, w, h)."""
-    if img is None:
+def pegar(frame, imagen, x, y, ancho, borde=None):
+    """
+    Pega la imagen reescalada a 'ancho' con su esquina de arriba a la izquierda en (x, y).
+    """
+    if imagen is None:
         return x, y, 0, 0
-    h = int(img.shape[0] * ancho / img.shape[1])
-    H, W = frame.shape[:2]
-    h, ancho = min(h, H - y), min(ancho, W - x)
-    if h <= 0 or ancho <= 0:
+
+    alto_imagen = int(imagen.shape[0] * ancho / imagen.shape[1])
+    alto, ancho_visible = min(alto_imagen, frame.shape[0] - y), min(ancho, frame.shape[1] - x) # se recorta si se sale
+    if alto <= 0 or ancho_visible <= 0:
         return x, y, 0, 0
-    frame[y:y + h, x:x + ancho] = cv2.resize(img, (ancho, int(img.shape[0] * ancho / img.shape[1])))[:h, :ancho]
+
+    frame[y:y + alto, x:x + ancho_visible] = cv2.resize(imagen, (ancho, alto_imagen))[:alto, :ancho_visible]
     if borde is not None:
-        cv2.rectangle(frame, (x, y), (x + ancho - 1, y + h - 1), borde, max(2, int(3 * _escala(frame))))
-    return x, y, ancho, h
+        cv2.rectangle(frame, (x, y), (x + ancho_visible - 1, y + alto - 1), borde, max(2, int(3 * escala(frame))))
+
+    return x, y, ancho_visible, alto
 
 
-def barra(frame, x, y, w, h, progreso, color=VERDE):
-    cv2.rectangle(frame, (x, y), (x + w, y + h), NEGRO, -1)
-    cv2.rectangle(frame, (x, y), (x + int(w * max(0.0, min(1.0, progreso))), y + h), color, -1)
-    cv2.rectangle(frame, (x, y), (x + w, y + h), BLANCO, 1)
+def barra(frame, x, y, ancho, alto, progreso, color=(0, 220, 0)): # color verde btw
+    cv2.rectangle(frame, (x, y), (x + ancho, y + alto), (0, 0, 0), -1)
+    cv2.rectangle(frame, (x, y), (x + int(ancho * max(0.0, min(1.0, progreso))), y + alto), color, -1)
+    cv2.rectangle(frame, (x, y), (x + ancho, y + alto), (255, 255, 255), 1)
 
 
-def marco_rojo(frame, nadie=True):
-    """Marco rojo alrededor de toda la imagen: no se detecta al jugador (nadie=True) o solo en parte."""
-    H, W = frame.shape[:2]
-    g = max(8, int(12 * _escala(frame)))
-    cv2.rectangle(frame, (0, 0), (W - 1, H - 1), ROJO, g)
-    if nadie:
-        # En el centro: cuando sale este aviso no hay nadie en pantalla, así que no tapa al jugador
-        texto(frame, "No se te ve: colocate delante de la camara", W / 2, H / 2, ROJO, 0.7, centrado=True)
+def color_nota(nota):
+    """
+    Da un color según la puntuación de tu postura
+    """
+    if nota >= UMBRAL_APROBADO:
+        return (0, 220, 0) # Verde btw
+
+    return (0, 220, 255) if nota >= UMBRAL_APROBADO - 20 else (0, 0, 255) # Devuelve amarillo si cumple un umbral de semi-acierto, rojo si lo has hecho de pena
+
+
+def marco_rojo(frame, nadie):
+    """
+    Marco rojo alrededor de la imagen cuando no se ve al jugador o solo se le ve en parte.
+    Me hubiera gustado que parpadeara con colores rojo y negro + sonidito de alarma de bomba nuclear
+    para advertir sigilosamente que no se le está detectando
+    """
+    alto, ancho = frame.shape[0], frame.shape[1]
+    grosor = max(8, int(12 * escala(frame)))
+    cv2.rectangle(frame, (0, 0), (ancho - 1, alto - 1), (0, 0, 255), grosor)
+
+    if nadie: # en el centro, total no hay nadie a quien tapar porque se habrá ido a buscar el token del fornite
+        texto(frame, "No se te ve: colocate delante de la camara", ancho / 2, alto / 2, (0, 0, 255), 0.7, centrado=True)
     else:
-        # Se le ve a medias: el aviso va arriba para no taparle
-        texto(frame, "No se te ve entero: alejate o centrate", W / 2, H * 0.22, ROJO, 0.6, centrado=True)
+        texto(frame, "No se te ve entero: alejate o centrate", ancho / 2, alto * 0.22, (0, 0, 255), 0.6, centrado=True)
 
 
-def _color_nota(nota):
-    return VERDE if nota >= UMBRAL_APROBADO else (AMARILLO if nota >= UMBRAL_APROBADO - 20 else ROJO)
-
-
-# --- pantallas -------------------------------------------------------------------------------------
-def _menu(frame, estado):
-    H, W = frame.shape[:2]
-    m = int(10 * _escala(frame))
-    ancho = int(W * TAMANO_MINIATURA)
+def pantalla_menu(frame, estado):
+    """
+    Función principal para mostrar el menú completo.
+    """
+    
+    alto, ancho = frame.shape[0], frame.shape[1]
+    margen = int(10 * escala(frame))
+    ancho_miniatura = int(ancho * TAMANO_MINIATURA)
     menu = estado["menu"]
+
     for dificultad, esquina in ESQUINAS_MENU.items():
-        img = _imagen(game._imagen_de(dificultad, "default", "media"))
-        h = int(img.shape[0] * ancho / img.shape[1]) if img is not None else ancho
-        x = m if esquina.endswith("izq") else W - ancho - m
-        y = m + int(22 * _escala(frame)) if esquina.startswith("arriba") else H - h - m - int(22 * _escala(frame))
+        imagen = cargar_imagen(imagen_default(dificultad))
+        alto_miniatura = int(imagen.shape[0] * ancho_miniatura / imagen.shape[1]) if imagen is not None else ancho_miniatura
+        x = margen if esquina.endswith("izq") else ancho - ancho_miniatura - margen
+        y = margen + int(22 * escala(frame)) if esquina.startswith("arriba") else alto - alto_miniatura - margen - int(22 * escala(frame))
+
         elegida = dificultad == menu["candidata"]
-        _, _, w, h = pegar(frame, img, x, y, ancho, borde=VERDE if elegida else BLANCO)
-        punt = menu["puntuaciones"].get(dificultad)
-        etiqueta = dificultad.upper() + ("" if punt is None else f"  {punt:.0f}")
-        texto(frame, etiqueta, x, y - int(6 * _escala(frame)), VERDE if elegida else BLANCO, 0.55)
+        _, _, w, h = pegar(frame, imagen, x, y, ancho_miniatura, borde=(0, 220, 0) if elegida else (255, 255, 255))
+
+        puntuacion = menu["puntuaciones"].get(dificultad)
+        etiqueta = dificultad.upper() + ("" if puntuacion is None else f"  {puntuacion:.0f}")
+        texto(frame, etiqueta, x, y - int(6 * escala(frame)), (0, 220, 0) if elegida else (255, 255, 255), 0.55)
+
         if elegida:
-            barra(frame, x, y + h + int(4 * _escala(frame)), w, int(10 * _escala(frame)), menu["progreso"])
-    texto(frame, "Q: salir", m, H - m - int(8 * _escala(frame)), BLANCO, 0.6)
-    texto(frame, "Haz la postura de una esquina para elegir", W / 2, H - m - int(40 * _escala(frame)),
-          BLANCO, 0.55, centrado=True)
+            barra(frame, x, y + h + int(4 * escala(frame)), w, int(10 * escala(frame)), menu["progreso"])
+
+    texto(frame, "Q: salir", margen, alto - margen - int(8 * escala(frame)), (255, 255, 255), 0.6)
+    texto(frame, "Haz la postura de una esquina para elegir", ancho / 2, alto - margen - int(40 * escala(frame)), (255, 255, 255), 0.55, centrado=True)
 
 
-def _explicacion(frame, estado):
-    H, W = frame.shape[:2]
+def pantalla_explicacion(frame, estado):
+    """
+    Función para mostrar la imagen que le tocará al usuario simular.
+    """
+    alto, ancho = frame.shape[0], frame.shape[1]
     oscurecer(frame, 0.75)
     pose = estado["pose"]
-    texto(frame, f"Postura {estado['indice'] + 1} de {estado['total']}: {pose['nombre']}", W / 2,
-          int(40 * _escala(frame)), BLANCO, 0.8, centrado=True)
-    img = _imagen(pose["imagen"])
-    if img is not None:
-        alto_max, ancho_max = int(H * 0.7), int(W * 0.8)
-        ancho = min(ancho_max, int(img.shape[1] * alto_max / img.shape[0]))
-        h = int(img.shape[0] * ancho / img.shape[1])
-        pegar(frame, img, (W - ancho) // 2, int(60 * _escala(frame)) + (alto_max - h) // 2, ancho, borde=BLANCO)
-    texto(frame, f"Fijate bien... {estado['restante']:.0f}", W / 2, H - int(20 * _escala(frame)),
-          AMARILLO, 0.7, centrado=True)
+    texto(frame, f"Postura {estado['indice'] + 1} de {estado['total']}: {pose['nombre']}", ancho / 2, int(40 * escala(frame)), (255, 255, 255), 0.8, centrado=True)
+
+    imagen = cargar_imagen(pose["imagen"])
+    if imagen is not None: # lo más grande posible sin pasarse del 70 % del alto ni del 80 % del ancho
+        alto_max, ancho_max = int(alto * 0.7), int(ancho * 0.8)
+        ancho_imagen = min(ancho_max, int(imagen.shape[1] * alto_max / imagen.shape[0]))
+        alto_imagen = int(imagen.shape[0] * ancho_imagen / imagen.shape[1])
+        pegar(frame, imagen, (ancho - ancho_imagen) // 2, int(60 * escala(frame)) + (alto_max - alto_imagen) // 2, ancho_imagen, borde=(255, 255, 255))
+
+    texto(frame, f"Fijate bien... {estado['restante']:.0f}", ancho / 2, alto - int(20 * escala(frame)), (255, 255, 255), 0.7, centrado=True)
 
 
-def _guia(frame, estado):
-    """Miniatura de la pose en la esquina superior derecha + nombre."""
-    H, W = frame.shape[:2]
-    m = int(10 * _escala(frame))
-    ancho = int(W * TAMANO_MINIATURA)
-    pegar(frame, _imagen(estado["pose"]["imagen"]), W - ancho - m, m, ancho, borde=BLANCO)
-    texto(frame, f"{estado['indice'] + 1}/{estado['total']} {estado['pose']['nombre']}", m,
-          int(28 * _escala(frame)), BLANCO, 0.6)
+def pantalla_ejecucion(frame, estado):
+    """
+    Función para mostrar la pantalla durante la ejecución de una pose. Me gustaría poner una grada
+    con expectadores, pero se nos va del presupuesto (me quedan 5 euros en la cartera)
+    """
+    alto, ancho = frame.shape[0], frame.shape[1]
+    margen = int(10 * escala(frame))
+    ancho_miniatura = int(ancho * TAMANO_MINIATURA)
+
+    pegar(frame, cargar_imagen(estado["pose"]["imagen"]), ancho - ancho_miniatura - margen, margen, ancho_miniatura, borde=(255, 255, 255))
+    texto(frame, f"{estado['indice'] + 1}/{estado['total']} {estado['pose']['nombre']}", margen, int(28 * escala(frame)), (255, 255, 255), 0.6)
+
+    color = (0, 0, 255) if estado["restante"] <= 5 else (255, 255, 255)
+    texto(frame, f"Quedan {estado['restante']:.0f} s", margen, int(58 * escala(frame)), color, 0.7)
+
+    comparacion = estado["comparacion"]
+    if comparacion and comparacion["puntuacion"] is not None:
+        texto(frame, f"{comparacion['puntuacion']:.0f}", margen, int(95 * escala(frame)), color_nota(comparacion["puntuacion"]), 1.0)
+
+    ancho_barra = int(ancho * 0.5)
+    texto(frame, "Manten la postura", ancho / 2, alto - int(42 * escala(frame)), (255, 255, 255), 0.55, centrado=True)
+    barra(frame, (ancho - ancho_barra) // 2, alto - int(34 * escala(frame)), ancho_barra, int(14 * escala(frame)), estado["mantenido"] / VENTANA_PUNTUACION)
 
 
-def _ejecucion(frame, estado):
-    H, W = frame.shape[:2]
-    _guia(frame, estado)
-    m = int(10 * _escala(frame))
-    color = ROJO if estado["restante"] <= 5 else BLANCO           # se pone rojo en los últimos 5 s
-    texto(frame, f"Quedan {estado['restante']:.0f} s", m, int(58 * _escala(frame)), color, 0.7)
-    comp = estado["comparacion"]
-    if comp and comp["puntuacion"] is not None:
-        texto(frame, f"{comp['puntuacion']:.0f}", m, int(95 * _escala(frame)), _color_nota(comp["puntuacion"]), 1.0)
-    progreso = estado["mantenido"] / VENTANA_PUNTUACION
-    ancho_barra = int(W * 0.5)
-    texto(frame, "Manten la postura", W / 2, H - int(42 * _escala(frame)), BLANCO, 0.55, centrado=True)
-    barra(frame, (W - ancho_barra) // 2, H - int(34 * _escala(frame)), ancho_barra, int(14 * _escala(frame)), progreso)
-
-
-def _nota_pose(frame, estado):
-    H, W = frame.shape[:2]
+def pantalla_nota(frame, estado):
+    """
+    Muestra la nota que has obtenido. Simple, pero elegante, hasta que sacas un -10 y haces ragequit
+    """
+    alto, ancho = frame.shape[0], frame.shape[1]
     oscurecer(frame, 0.6)
-    nota = estado["nota"]
-    texto(frame, estado["pose"]["nombre"], W / 2, H / 2 - int(40 * _escala(frame)), BLANCO, 0.9, centrado=True)
-    texto(frame, f"{nota:.0f}", W / 2, H / 2 + int(30 * _escala(frame)), _color_nota(nota), 2.2, 4, centrado=True)
+    texto(frame, estado["pose"]["nombre"], ancho / 2, alto / 2 - int(40 * escala(frame)), (255, 255, 255), 0.9, centrado=True)
+    texto(frame, f"{estado['nota']:.0f}", ancho / 2, alto / 2 + int(30 * escala(frame)), color_nota(estado["nota"]), 2.2, 4, centrado=True)
 
 
-def _resultados(frame, estado):
-    H, W = frame.shape[:2]
+def pantalla_resultados(frame, estado):
+    """
+    Muestra el resultado final de la partida, con los reslutados anteriores y la media final.
+    Pondría emoticonos de aplauso y cosas similares, pero, repito, fuera de nuestro presupuesto
+    """
+    alto, ancho = frame.shape[0], frame.shape[1]
     oscurecer(frame, 0.8)
-    e = _escala(frame)
-    texto(frame, f"Resultados - {str(estado['dificultad']).upper()}", W / 2, int(45 * e), BLANCO, 0.9, centrado=True)
+    e = escala(frame)
+    texto(frame, f"Resultados - {str(estado['dificultad']).upper()}", ancho / 2, int(45 * e), (255, 255, 255), 0.9, centrado=True)
+
     y = int(95 * e)
-    for r in estado["resultados"]:
-        texto(frame, r["nombre"], W * 0.18, y, BLANCO, 0.65)
-        texto(frame, f"{r['nota']:.0f}", W * 0.75, y, _color_nota(r["nota"]), 0.75)
+    for resultado in estado["resultados"]:
+        texto(frame, resultado["nombre"], ancho * 0.18, y, (255, 255, 255), 0.65)
+        texto(frame, f"{resultado['nota']:.0f}", ancho * 0.75, y, color_nota(resultado["nota"]), 0.75)
         y += int(34 * e)
-    cv2.line(frame, (int(W * 0.15), y - int(18 * e)), (int(W * 0.85), y - int(18 * e)), BLANCO, 1)
+
+    cv2.line(frame, (int(ancho * 0.15), y - int(18 * e)), (int(ancho * 0.85), y - int(18 * e)), (255, 255, 255), 1)
     media = estado.get("media", 0.0)
-    texto(frame, "Media", W * 0.18, y + int(12 * e), BLANCO, 0.8)
-    texto(frame, f"{media:.0f}", W * 0.75, y + int(12 * e), _color_nota(media), 1.0)
-    texto(frame, "ENTER: volver al menu     Q: salir", W / 2, H - int(20 * e), GRIS, 0.55, centrado=True)
+    texto(frame, "Media", ancho * 0.18, y + int(12 * e), (255, 255, 255), 0.8)
+    texto(frame, f"{media:.0f}", ancho * 0.75, y + int(12 * e), color_nota(media), 1.0)
+    texto(frame, "ENTER: volver al menu     Q: salir", ancho / 2, alto - int(20 * e), (150, 150, 150), 0.55, centrado=True) # Color gris btw
 
 
-PANTALLAS = {game.MENU: _menu, game.EXPLICACION: _explicacion, game.EJECUCION: _ejecucion, game.NOTA_POSE: _nota_pose, game.RESULTADOS: _resultados}
+# Este diccionario es para ejecutar una serie de funciones acorde a la fase (que sería la clave)
+# Como todos reciben frame y estado, se puede hacer esta maravilla. Gracias Python TQM
+PANTALLAS = {
+    "menu": pantalla_menu,
+    "explicacion": pantalla_explicacion,
+    "ejecucion": pantalla_ejecucion,
+    "nota_pose": pantalla_nota,
+    "resultados": pantalla_resultados
+}
 
 
 def dibujar(frame, estado, result):
-    """Pinta el esqueleto (coloreado si hay pose que comparar) y la pantalla de la fase actual."""
-    if result.pose_landmarks and estado["fase"] in (game.MENU, game.EJECUCION):
+    """
+    Dibuja el esqueleto y la pantalla de la fase en la que esté el juego.
+    Sorprendentemente limpio la verdad.
+    """
+    if result.pose_landmarks and estado["fase"] in ("menu", "ejecucion"):
         dibujar_esqueleto(frame, result.pose_landmarks[0], None, estado["comparacion"])
+
     PANTALLAS[estado["fase"]](frame, estado)
-    if estado["fase"] in (game.NOTA_POSE, game.RESULTADOS):
+
+    if estado["fase"] in ("nota_pose", "resultados"):
         return
+
     if not estado["detectado"]:
         marco_rojo(frame, nadie=True)
+    
     elif not estado.get("visible", True):
         marco_rojo(frame, nadie=False)

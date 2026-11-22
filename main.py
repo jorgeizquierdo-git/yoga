@@ -1,87 +1,60 @@
-"""Juego de posturas de yoga con MediaPipe Pose Landmarker.
-
-Uso (desde la carpeta del repo, con el entorno activado, los modelos descargados y los .json generados):
-    python main.py
-
-Flujo: menú (haz la postura de una esquina para elegir dificultad) -> por cada postura de esa dificultad:
-explicación, preparación y ejecución -> resultados con la nota de cada postura y la media.
-La lógica está en game.py y el dibujo en ui.py; los tiempos se configuran en utils.py.
-
-Sonidos: los .wav de soniditos/ (sonidos.py). Si no hay audio disponible, el juego va en silencio.
-
-Teclas: ESC o q -> salir | m -> volver al menú | ENTER o espacio (en resultados) -> volver al menú
-"""
-import os
-import sys
 import time
-
 import cv2
 import mediapipe as mp
-
 import ui
-from game import Juego, RESULTADOS
+from game import Juego
 from sonidos import Sonidos
 from suavizado import FiltroEsqueleto
-from utils import MODEL_PATH, CAMERA_INDEX, ESCALA_VENTANA
-
-BaseOptions = mp.tasks.BaseOptions
-PoseLandmarker = mp.tasks.vision.PoseLandmarker
-PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
-RunningMode = mp.tasks.vision.RunningMode
-VENTANA = "Yoga"
-
+from utils import MODEL_PATH, CAMERA_INDEX
 
 def main():
-    if not os.path.exists(MODEL_PATH):
-        sys.exit(f"No se encuentra el modelo en {MODEL_PATH}.\nEjecuta antes: python download_models.py")
-    if not os.path.isdir("jason"):
-        sys.exit("No existe la carpeta jason/. Genera antes las posturas: python regenerador_poses.py")
-
+    """
+    Funcion principal de TODO lo que hemos hecho. Muy similar al main de tracker_poses.py
+    """
     cap = cv2.VideoCapture(CAMERA_INDEX)
     if not cap.isOpened():
-        sys.exit("No se pudo abrir la cámara. Prueba con otro CAMERA_INDEX o cierra otras apps que la usen.")
+        print("No se pudo abrir la cámara, prueba con otro CAMERA_INDEX")
+        return
 
-    options = PoseLandmarkerOptions(
-        base_options=BaseOptions(model_asset_path=MODEL_PATH),
-        running_mode=RunningMode.VIDEO,
+    options = mp.tasks.vision.PoseLandmarkerOptions(
+        base_options=mp.tasks.BaseOptions(model_asset_path=MODEL_PATH),
+        running_mode=mp.tasks.vision.RunningMode.VIDEO,
         num_poses=1,
     )
 
-    juego = Juego()
-    sonidos = Sonidos()
-    filtro = FiltroEsqueleto()
-    cv2.namedWindow(VENTANA, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
-    ventana_ajustada = False
+    juego, sonidos, filtro = Juego(), Sonidos(), FiltroEsqueleto()
+    cv2.namedWindow("Yoga", cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
+    escalar = True
     t0 = time.monotonic()
 
-    with PoseLandmarker.create_from_options(options) as landmarker:
+    with mp.tasks.vision.PoseLandmarker.create_from_options(options) as landmarker:
         while True:
             ok, frame = cap.read()
+            
             if not ok:
-                print("No se pudo leer un frame de la cámara.")
+                print("No se pudo leer un frame de la cámara :(")
                 break
 
-            frame = cv2.flip(frame, 1)                       # efecto espejo
-            alto, ancho = frame.shape[:2]
-            if not ventana_ajustada:
-                cv2.resizeWindow(VENTANA, ancho * 2, alto * 2)
-                ventana_ajustada = True
+            frame = cv2.flip(frame, 1)
+            alto, ancho = frame.shape[0], frame.shape[1]
+            if escalar:
+                cv2.resizeWindow("Yoga", ancho * 2, alto * 2)
+                escalar = False
 
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)     # OpenCV da BGR; MediaPipe espera RGB
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             ahora = time.monotonic()
-            result = landmarker.detect_for_video(mp_image, int((ahora - t0) * 1000))
-            result = filtro.aplicar(result, ahora)           # quita temblores y saltos (suavizado.py)
+            result = filtro.aplicar(landmarker.detect_for_video(mp_image, int((ahora - t0) * 1000)), ahora)
 
             estado = juego.actualizar(result, ancho, alto, ahora)
             sonidos.reproducir_eventos(estado["eventos"])
             ui.dibujar(frame, estado, result)
-            cv2.imshow(VENTANA, frame)
+            cv2.imshow("Yoga", frame)
 
             tecla = cv2.waitKey(1) & 0xFF
             if tecla in (27, ord("q")):
                 break
-            if tecla == ord("m") or (estado["fase"] == RESULTADOS and tecla in (13, 32)):
+
+            if tecla == ord("m") or (estado["fase"] == "resultados" and tecla in (13, 32)):
                 juego.ir_al_menu()
 
     cap.release()
