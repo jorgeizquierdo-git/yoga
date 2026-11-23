@@ -2,7 +2,11 @@ import os
 import wave
 import numpy as np
 from utils import SONIDOS_ACTIVOS, CARPETA_SONIDOS
-import sounddevice as sd
+
+try:
+    import sounddevice as sd
+except (ImportError, OSError): # En Linux falta PortAudio (sudo apt install libportaudio2): el juego va en silencio
+    sd = None
 
 # Si en el mismo frame tocan varios sonidos solo suena el primero de esta lista, porque uno cortaría al otro
 # Es, en esencia, una cola de prioridad.
@@ -35,7 +39,9 @@ class Sonidos:
         Inicilaización. Carga todos los sonidos
         """
         self.sonidos = {}
-        self.activos = SONIDOS_ACTIVOS
+        self.activos = SONIDOS_ACTIVOS and sd is not None
+        if SONIDOS_ACTIVOS and sd is None:
+            print("No se puede usar el audio (falta PortAudio), el juego irá en silencio")
 
         for archivo in sorted(os.listdir(CARPETA_SONIDOS)):
             if archivo.endswith(".wav"):
@@ -46,7 +52,7 @@ class Sonidos:
         """
         No bloquea el juego. Si falla el audio se desactiva y el juego sigue en silencio
         """
-        if nombre not in self.sonidos: # Y este sonido pallo??!??!?!?!?! FUERA
+        if not self.activos or nombre not in self.sonidos: # Y este sonido pallo??!??!?!?!?! FUERA
             return
 
         datos, frecuencia = self.sonidos[nombre]
