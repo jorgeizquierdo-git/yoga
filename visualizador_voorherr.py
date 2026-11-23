@@ -5,7 +5,7 @@ import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
-from utils import _indice, MODEL_PATH
+from utils import indice, MODEL_PATH
 
 CONECTORES = [(c.start, c.end) for c in mp.tasks.vision.PoseLandmarksConnections.POSE_LANDMARKS]
 
@@ -53,7 +53,7 @@ def detectar_puntos_json(postura):
     for datos in angulos.values():
         puntos = datos["puntos"] if datos["puntos"] else []
         for p in puntos:
-            indices.add(_indice(p))
+            indices.add(indice(p))
     
     return indices
 
