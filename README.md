@@ -50,3 +50,6 @@ Para descargar los pesos de otros modelos como _Hand Landmarker_, _Face Landmark
 ```bash
 python app.py
 ```
+### Pequeños comentarios
+
+Algunos compañeros no saben borrar imégenes de docker cuando terminan y no pueden encender el ordenador por un tiempecito.
