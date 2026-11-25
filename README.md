@@ -55,6 +55,31 @@ Por qué cada cosa:
 
 La cámara, la pantalla y los altavoces son del ordenador, no del contenedor. Por eso hay que pasárselos al ejecutarlo, y por eso en Windows y macOS es mejor usar el entorno virtual.
 
+## Si no funciona la cámara
+
+El juego usa la cámara con índice `0`, que suele ser la cámara principal del ordenador. Si hay varias cámaras (una externa, una virtual de OBS o Teams, la de infrarrojos de Windows Hello…), puede que la `0` no sea la correcta.
+
+**Síntomas:**
+
+- Al arrancar aparece `No se pudo abrir la cámara, prueba con otro CAMERA_INDEX`.
+- Aparece `No se pudo leer un frame de la cámara` y el juego se cierra.
+- La ventana se abre, pero la imagen sale negra, congelada o de otra cámara, y el juego nunca te detecta (marco rojo).
+
+**Solución:** cambia el índice en `utils.py` y vuelve a ejecutar:
+
+```python
+CAMERA_INDEX = 0 # prueba con 1, 2...
+```
+
+Prueba primero con `1` y después con `2`, hasta que se vea tu imagen.
+
+**Otras causas habituales:**
+
+- **La cámara la está usando otra aplicación** (Teams, Zoom, Discord, el navegador…). Ciérrala y vuelve a probar.
+- **macOS:** la terminal necesita permiso para usar la cámara. Actívalo en *Ajustes del Sistema → Privacidad y seguridad → Cámara* y vuelve a abrir la terminal.
+- **Linux:** con `ls /dev/video*` puedes ver qué cámaras hay. Algunas cámaras crean dos entradas (por ejemplo `video0` y `video1`) y solo una da imagen.
+- **Docker:** si tu cámara no es `/dev/video0`, no hace falta cambiar el código: al ejecutar el contenedor, cambia `--device /dev/video0` por, por ejemplo, `--device /dev/video1:/dev/video0`. Así tu cámara aparece dentro del contenedor como la `0`.
+
 ## El repositorio
 
 ```
