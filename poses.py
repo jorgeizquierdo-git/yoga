@@ -7,6 +7,9 @@ from utils import (
 
 
 def cargar_postura(ruta):
+    """
+    Carga la postura de la ruta obtenida
+    """
     with open(ruta, "r", encoding="utf-8") as f:
         return json.load(f)["postura"]
 
@@ -55,7 +58,7 @@ def espejar_pose(pose):
 
 def nota_angulo(error):
     """
-    Clasico calculo de error relativo. Me siento muy orgulloso de recordarlo
+    Ecuación de cálculo de error. La nota es una ecuación lineal porque no queríamos complicarnos muhco
     """
     return max(0.0, 1.0 - abs(error) / ERROR_MAXIMO)
 
@@ -63,7 +66,7 @@ def nota_angulo(error):
 def comparar_posturas(observados, esperado):
     """
     Media ponderada de las notas de los ángulos que se han podido medir. Si lo medido no llega a COBERTURA_MINIMA
-    del peso total, la postura es "no_evaluable"
+    del peso total, la postura pasa a ser 'no_evaluable'
     """
     detalle = {}
     for clave, datos in angulos_relevantes(esperado):
@@ -96,11 +99,11 @@ def comparar_posturas(observados, esperado):
     if sin_medir:
         resultado["avisos"].append("No se ven bien: " + ", ".join(clave.replace("_", " ") for clave in sin_medir))
 
-    if peso_medido <= 0 or resultado["cobertura"] < COBERTURA_MINIMA: # Si todos los pesos calculados del esqueleto no llegan al 60% (por defecto)
+    if peso_medido <= 0 or resultado["cobertura"] < COBERTURA_MINIMA: # Si todos los pesos calculados del esqueleto no llegan al 60% (por defecto) o no se midió nada
         resultado["estado"] = "no_evaluable"
         return resultado
 
-    resultado["puntuacion"] = 100.0 * sum(dato["peso"] * dato["nota"] for dato in medidos) / peso_medido
+    resultado["puntuacion"] = 100.0 * sum(dato["peso"] * dato["nota"] for dato in medidos) / peso_medido # Ponderación al resultado
     resultado["estado"] = "ok" if resultado["puntuacion"] >= UMBRAL_APROBADO else "fallo"
     
     return resultado

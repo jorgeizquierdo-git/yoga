@@ -9,8 +9,8 @@ from utils import (
 
 def mejor_ventana(muestras):
     """
-    Media del mejor tramo de VENTANA_PUNTUACION segundos seguidos. Los None (no evaluable) no cuentan y un tramo
-    necesita al menos COBERTURA_VENTANA de valores válidos. Si se ha durado menos que la ventana, cuenta todo
+    Media del mejor tramo de VENTANA_PUNTUACION segundos seguidos. Los no evaluables no cuentan y un tramo
+    necesita al menos COBERTURA_VENTANA de valores válidos. Si se ha durado menos que la ventana, cuenta todo.
     """
     if not muestras:
         return 0.0
@@ -33,7 +33,7 @@ def mejor_ventana(muestras):
 
 def buscar_imagen(dificultad, nombre):
     """
-    Ya no quiero explicar esta funcion. Me niego
+    Busca la imagen con los parámetros dificultad y nombre
     """
     for extension in (".jpg", ".jpeg", ".png"):
         ruta = os.path.join("media", dificultad, nombre + extension)
@@ -132,7 +132,7 @@ class Juego:
             "eventos": self.eventos
         }
 
-        if self.fase == "menu":
+        if self.fase == "menu": # Actualiza los puntajes de las posiciones y pasa al siguiente evento si es seleccionado una de ellas
             estado["menu"] = self.selector.actualizar(result, ancho, alto, ahora)
             
             if estado["menu"]["elegida"]:
@@ -154,7 +154,7 @@ class Juego:
         estado["pose"] = pose
         estado["restante"] = max(0.0, self.duracion(self.fase) - transcurrido)
 
-        if self.fase == "ejecucion" and detectado:
+        if self.fase == "ejecucion" and detectado: # Si se le detecta durante la ejecución, toca comparar la pose
             estado["comparacion"] = comparar_pose(result, pose["postura"], ancho, alto)
 
         # Determina si se le ve lo suficiente para ver al usuario. Se tiene en cuenta si aún no se puede comparar con nada
@@ -187,7 +187,7 @@ class Juego:
             self.mantener_inicio = self.mantener_inicio or ahora
             self.mantener_ultimo_ok = ahora
         
-        elif self.mantener_inicio is not None and ahora - self.mantener_ultimo_ok > GRACIA_MANTENER: # El manco ha perdido su postura xdxdxdxd
+        elif self.mantener_inicio is not None and ahora - self.mantener_ultimo_ok > GRACIA_MANTENER: # El usuario ha perdido la postura
             self.mantener_inicio = self.mantener_ultimo_ok = None
             self.segundos_sonados = 0
 
@@ -216,7 +216,7 @@ class Juego:
 
         conseguida = estado["mantenido"] >= VENTANA_PUNTUACION
         
-        if conseguida or transcurrido >= self.duracion("ejecucion"):
+        if conseguida or transcurrido >= self.duracion("ejecucion"): # Si logra la ejecución de la postura o ya ha pasado el tiempo
             self.eventos.append("conseguida" if conseguida else "tiempo_agotado")
             self.resultados.append({
                 "nombre": self.partida[self.indice]["nombre"], 

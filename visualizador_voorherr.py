@@ -38,7 +38,7 @@ def detectar_exoesqueleto_imagen(ruta_imagen, ruta_modelo):
     )
 
     with vision.PoseLandmarker.create_from_options(options) as landmarker:
-        resultado = landmarker.detect(mp_image)
+        resultado = landmarker.detect(mp_image) # Detecta el esqueleto de la imagen
 
     return imagen_bgr, resultado
 
@@ -48,12 +48,12 @@ def detectar_puntos_json(postura):
     correspondiente del esqueleto. Por eso la funcion es un poco rara.
     """
     indices = set()
-    angulos = postura["angulos"] if postura["angulos"] else {}
+    angulos = postura["angulos"] if postura["angulos"] else {} # Toma los datos de los ángulos.
     
     for datos in angulos.values():
-        puntos = datos["puntos"] if datos["puntos"] else []
+        puntos = datos["puntos"] if datos["puntos"] else [] # Obitene los nombres de los vertices que se usan en el ángulo
         for p in puntos:
-            indices.add(indice(p))
+            indices.add(indice(p)) # Guarda sus índices
     
     return indices
 
@@ -65,8 +65,8 @@ def crear_panel_esqueleto(altura, anchura, resultado, postura, minima_visibiliad
     panel = np.full((altura, anchura, 3), (24, 24, 24), dtype=np.uint8)
     landmarks = resultado.pose_landmarks[0]
 
-    coordenadas_2d = [(int(punto.x * anchura), int(punto.y * altura)) for punto in landmarks]
-    visibles = [punto.visibility >= minima_visibiliad for punto in landmarks]
+    coordenadas_2d = [(int(punto.x * anchura), int(punto.y * altura)) for punto in landmarks] # Solo coordenadas normales xy porque la z era demasiado ruidosa
+    visibles = [punto.visibility >= minima_visibiliad for punto in landmarks] # Visibilidad de cada punto
 
     for i, j in CONECTORES:
         if visibles[i] and visibles[j]:
@@ -78,9 +78,9 @@ def crear_panel_esqueleto(altura, anchura, resultado, postura, minima_visibiliad
             continue
 
         if indice in indices_jason:
-            color, radio = (0, 255, 255), 6 #Color (amarillo) y radio. Muesta los puntos detectados en el JSON
+            color, radio = (0, 255, 255), 6 #Color amarillo y radio. Muesta los puntos detectados en el JSON
         else:
-            color, radio = (0, 255, 0), 4 # Color (azul) y radio menor. Muestra puntos no detectados en el JSON
+            color, radio = (0, 255, 0), 4 # Color azul y radio menor. Muestra puntos no detectados en el JSON
 
         cv2.circle(panel, (x, y), radio, color, -1) # Grosor -1 porque si le das algún valor positivo solo dibuja la circunferencia
 
@@ -91,12 +91,12 @@ def redimensionar_pantalla(imagen, max_ancho=1600, max_alto=900):
     Redimensiona la pantalla si la imagen se sobrepasa de los límites.
     """
     alto, ancho = imagen.shape[0], imagen.shape[1]
-    if ancho <= max_ancho and alto <= max_alto:
+    if ancho <= max_ancho and alto <= max_alto: # Lo devuelve si no hace falta redimensionar
         return imagen
 
-    escala = min(max_alto / ancho, max_alto / alto)
+    escala = min(max_ancho / ancho, max_alto / alto)
     ancho_nuevo, alto_nuevo = max(1, int(ancho * escala)), max(1, int(alto * escala))
-    return cv2.resize(imagen, (ancho_nuevo, alto_nuevo), interpolation=cv2.INTER_AREA)
+    return cv2.resize(imagen, (ancho_nuevo, alto_nuevo), interpolation=cv2.INTER_AREA) # Reescalado nuevo
 
 def mostrar_json_lado_a_lado(ruta_json, ruta_imagen, max_ancho=1600, max_alto=900):
     """
@@ -110,13 +110,13 @@ def mostrar_json_lado_a_lado(ruta_json, ruta_imagen, max_ancho=1600, max_alto=90
     alto, ancho = imagen_bgr.shape[0], imagen_bgr.shape[0]
 
     panel_esqueleto = crear_panel_esqueleto(alto, ancho, resultado, postura)
-    composicion = np.hstack((imagen_bgr, panel_esqueleto))
+    composicion = np.hstack((imagen_bgr, panel_esqueleto)) # Pega cada imagen una al lado de la otra. Izquierda -> foto. Derecha -> su exoesqueleto
 
     vista = redimensionar_pantalla(composicion, max_ancho=max_ancho, max_alto=max_alto)
     titulo = f"Comparativa JSON - {postura["nombre"] if postura["nombre"] else "postura"}"
     cv2.namedWindow(titulo, cv2.WINDOW_AUTOSIZE)
     cv2.imshow(titulo, vista)
-    cv2.waitKey(0)
+    cv2.waitKey(0) # Salir con cualquier tecla
     cv2.destroyAllWindows()
     return composicion
 

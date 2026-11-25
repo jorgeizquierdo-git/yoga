@@ -106,7 +106,7 @@ ERROR_MAXIMO = 60.0 # error (en grados) a partir del cual un ángulo puntúa 0; 
 def indice(p):
     """
     Recibe ya sea el índice o el nombre del punto y devuelve su índice. Se tomó esta decisión para evitar problemas con nuestro
-    caos a la hora de programar.
+    caos a la hora de programar. Somos muy despistados
     """
     return IDX[p] if isinstance(p, str) else int(p)
 
@@ -129,7 +129,7 @@ def teta(a, b, c):
     """
     a, b, c = np.asarray(a, dtype=np.float64), np.asarray(b, dtype=np.float64), np.asarray(c, dtype=np.float64)
     v1, v2 = a - b, c - b 
-    coseno = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2) + 1e-10)
+    coseno = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2) + 1e-10) # +1e-10 para evitar divisiones por cero
     return float(np.degrees(np.arccos(np.clip(coseno, -1.0, 1.0))))
 
 
@@ -198,7 +198,9 @@ def puntos_fuera_de_imagen(result):
 
 
 def puntos_necesarios(pose):
-    """Índices (ordenados, sin repetir) de los puntos que usan los ángulos RELEVANTES de una postura."""
+    """
+    Índices ordenados y sin repetir de los putnos relevantes de una postura.
+    """
     return sorted({indice(p) for _, datos in angulos_relevantes(pose) for p in datos["puntos"]})
 
 

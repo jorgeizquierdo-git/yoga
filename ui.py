@@ -5,14 +5,14 @@ from tracker_poses import dibujar_esqueleto
 from utils import UMBRAL_APROBADO, VENTANA_PUNTUACION
 
 ESQUINAS_MENU = {"facil": "arriba_izq", "medio": "arriba_dcha", "dificil": "abajo_dcha"}
-TAMANO_MINIATURA = 0.22
+TAMANO_MINIATURA = 0.22 # Variable para ajustar las imágenes
 
 imagenes_cargadas = {}
 
 
 def cargar_imagen(ruta):
     """
-    Dudo mucho que tenga que explicarlo
+    Carga las imágenes y las gaurda en la variable global
     """
     if ruta not in imagenes_cargadas:
         imagenes_cargadas[ruta] = cv2.imread(ruta) if ruta else None
@@ -56,6 +56,9 @@ def texto(frame, txt, x, y, color=(255, 255, 255), tam=0.7, grosor=2, centrado=F
 
 
 def oscurecer(frame, cantidad):
+    """
+    Oscurece el fondo. Usado para la explicación y las notas
+    """
     frame[:] = (frame * (1 - cantidad)).astype(np.uint8)
 
 
@@ -78,7 +81,10 @@ def pegar(frame, imagen, x, y, ancho, borde=None):
     return x, y, ancho_visible, alto
 
 
-def barra(frame, x, y, ancho, alto, progreso, color=(0, 220, 0)): # color verde btw
+def barra(frame, x, y, ancho, alto, progreso, color=(0, 220, 0)): # color verde 
+    """
+    Barra de progreso para la selección de dificultad
+    """
     cv2.rectangle(frame, (x, y), (x + ancho, y + alto), (0, 0, 0), -1)
     cv2.rectangle(frame, (x, y), (x + int(ancho * max(0.0, min(1.0, progreso))), y + alto), color, -1)
     cv2.rectangle(frame, (x, y), (x + ancho, y + alto), (255, 255, 255), 1)
@@ -89,7 +95,7 @@ def color_nota(nota):
     Da un color según la puntuación de tu postura
     """
     if nota >= UMBRAL_APROBADO:
-        return (0, 220, 0) # Verde btw
+        return (0, 220, 0) # Verde 
 
     return (0, 220, 255) if nota >= UMBRAL_APROBADO - 20 else (0, 0, 255) # Devuelve amarillo si cumple un umbral de semi-acierto, rojo si lo has hecho de pena
 
@@ -97,14 +103,12 @@ def color_nota(nota):
 def marco_rojo(frame, nadie):
     """
     Marco rojo alrededor de la imagen cuando no se ve al jugador o solo se le ve en parte.
-    Me hubiera gustado que parpadeara con colores rojo y negro + sonidito de alarma de bomba nuclear
-    para advertir sigilosamente que no se le está detectando
     """
     alto, ancho = frame.shape[0], frame.shape[1]
     grosor = max(8, int(12 * escala(frame)))
     cv2.rectangle(frame, (0, 0), (ancho - 1, alto - 1), (0, 0, 255), grosor)
 
-    if nadie: # en el centro, total no hay nadie a quien tapar porque se habrá ido a buscar el token del fornite
+    if nadie: # en el centro, total no hay nadie a quien tapar.
         texto(frame, "No se te ve: colocate delante de la camara", ancho / 2, alto / 2, (0, 0, 255), 0.7, centrado=True)
     else:
         texto(frame, "No se te ve entero: alejate o centrate", ancho / 2, alto * 0.22, (0, 0, 255), 0.6, centrado=True)
@@ -120,9 +124,11 @@ def pantalla_menu(frame, estado):
     ancho_miniatura = int(ancho * TAMANO_MINIATURA)
     menu = estado["menu"]
 
-    for dificultad, esquina in ESQUINAS_MENU.items():
+    for dificultad, esquina in ESQUINAS_MENU.items(): # Imprime cada una de las imágenes y barras de progreso por dificultad.
         imagen = cargar_imagen(imagen_default(dificultad))
         alto_miniatura = int(imagen.shape[0] * ancho_miniatura / imagen.shape[1]) if imagen is not None else ancho_miniatura
+
+        # Se determina dónde se colocará la imagen
         x = margen if esquina.endswith("izq") else ancho - ancho_miniatura - margen
         y = margen + int(22 * escala(frame)) if esquina.startswith("arriba") else alto - alto_miniatura - margen - int(22 * escala(frame))
 
@@ -133,7 +139,7 @@ def pantalla_menu(frame, estado):
         etiqueta = dificultad.upper() + ("" if puntuacion is None else f"  {puntuacion:.0f}")
         texto(frame, etiqueta, x, y - int(6 * escala(frame)), (0, 220, 0) if elegida else (255, 255, 255), 0.55)
 
-        if elegida:
+        if elegida: # Colorea el progreso de la selección
             barra(frame, x, y + h + int(4 * escala(frame)), w, int(10 * escala(frame)), menu["progreso"])
 
     texto(frame, "Q: salir", margen, alto - margen - int(8 * escala(frame)), (255, 255, 255), 0.6)
@@ -161,8 +167,7 @@ def pantalla_explicacion(frame, estado):
 
 def pantalla_ejecucion(frame, estado):
     """
-    Función para mostrar la pantalla durante la ejecución de una pose. Me gustaría poner una grada
-    con expectadores, pero se nos va del presupuesto (me quedan 5 euros en la cartera)
+    Función para mostrar la pantalla durante la ejecución de una pose. 
     """
     alto, ancho = frame.shape[0], frame.shape[1]
     margen = int(10 * escala(frame))
@@ -171,11 +176,12 @@ def pantalla_ejecucion(frame, estado):
     pegar(frame, cargar_imagen(estado["pose"]["imagen"]), ancho - ancho_miniatura - margen, margen, ancho_miniatura, borde=(255, 255, 255))
     texto(frame, f"{estado['indice'] + 1}/{estado['total']} {estado['pose']['nombre']}", margen, int(28 * escala(frame)), (255, 255, 255), 0.6)
 
+    # Contador
     color = (0, 0, 255) if estado["restante"] <= 5 else (255, 255, 255)
     texto(frame, f"Quedan {estado['restante']:.0f} s", margen, int(58 * escala(frame)), color, 0.7)
 
     comparacion = estado["comparacion"]
-    if comparacion and comparacion["puntuacion"] is not None:
+    if comparacion and comparacion["puntuacion"] is not None: # Si hay comparación, pone la nota con su color
         texto(frame, f"{comparacion['puntuacion']:.0f}", margen, int(95 * escala(frame)), color_nota(comparacion["puntuacion"]), 1.0)
 
     ancho_barra = int(ancho * 0.5)
@@ -185,7 +191,7 @@ def pantalla_ejecucion(frame, estado):
 
 def pantalla_nota(frame, estado):
     """
-    Muestra la nota que has obtenido. Simple, pero elegante, hasta que sacas un -10 y haces ragequit
+    Muestra la nota que has obtenido.
     """
     alto, ancho = frame.shape[0], frame.shape[1]
     oscurecer(frame, 0.6)
@@ -196,24 +202,24 @@ def pantalla_nota(frame, estado):
 def pantalla_resultados(frame, estado):
     """
     Muestra el resultado final de la partida, con los reslutados anteriores y la media final.
-    Pondría emoticonos de aplauso y cosas similares, pero, repito, fuera de nuestro presupuesto
     """
     alto, ancho = frame.shape[0], frame.shape[1]
     oscurecer(frame, 0.8)
-    e = escala(frame)
+    e = escala(frame) # con 'escala' falla
     texto(frame, f"Resultados - {str(estado['dificultad']).upper()}", ancho / 2, int(45 * e), (255, 255, 255), 0.9, centrado=True)
 
     y = int(95 * e)
-    for resultado in estado["resultados"]:
+    for resultado in estado["resultados"]: # Muestra en orden los resultados
         texto(frame, resultado["nombre"], ancho * 0.18, y, (255, 255, 255), 0.65)
         texto(frame, f"{resultado['nota']:.0f}", ancho * 0.75, y, color_nota(resultado["nota"]), 0.75)
         y += int(34 * e)
 
+    # Muestra la media
     cv2.line(frame, (int(ancho * 0.15), y - int(18 * e)), (int(ancho * 0.85), y - int(18 * e)), (255, 255, 255), 1)
-    media = estado.get("media", 0.0)
+    media = estado.get("media", 0.0) 
     texto(frame, "Media", ancho * 0.18, y + int(12 * e), (255, 255, 255), 0.8)
     texto(frame, f"{media:.0f}", ancho * 0.75, y + int(12 * e), color_nota(media), 1.0)
-    texto(frame, "ENTER: volver al menu     Q: salir", ancho / 2, alto - int(20 * e), (150, 150, 150), 0.55, centrado=True) # Color gris btw
+    texto(frame, "ENTER: volver al menu     Q: salir", ancho / 2, alto - int(20 * e), (150, 150, 150), 0.55, centrado=True) # Color gris 
 
 
 # Este diccionario es para ejecutar una serie de funciones acorde a la fase (que sería la clave)

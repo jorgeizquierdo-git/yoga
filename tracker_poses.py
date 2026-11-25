@@ -87,26 +87,26 @@ def etiquetas_por_vertice(medidos):
 
 def dibujar_esqueleto(frame, landmarks, medidos=None, comparacion=None):
     """
-    Dibuja huesos y puntos. No existe mejor explicacion
+    Dibuja huesos y puntos del esqueleto.
     """
     alto, ancho = frame.shape[0], frame.shape[1]
 
     puntos = [(int(punto.x * ancho), int(punto.y * alto)) for punto in landmarks]
     visibles = [punto.visibility >= MIN_VISIBILIDAD for punto in landmarks]
 
-    for i, j in CONEXIONES:
+    for i, j in CONEXIONES: # Dibuja los huesos
         if visibles[i] and visibles[j]:
             cv2.line(frame, puntos[i], puntos[j], COLOR_HUESO, 2)
 
     color_por_angulo, color_por_vertice = colores_comparacion(comparacion)
-    for i, punto in enumerate(puntos):
+    for i, punto in enumerate(puntos): # Dibuja cada vértice
         if visibles[i]:
             cv2.circle(frame, punto, 4, color_por_vertice.get(i, COLOR_PUNTO_PREDETERMINADO), -1)
 
     if medidos is None:
         return
 
-    for vertice, lineas in etiquetas_por_vertice(medidos).items():
+    for vertice, lineas in etiquetas_por_vertice(medidos).items(): # Texto de cada vértice
         if visibles[vertice]:
             x, y = puntos[vertice]
             for n, (clave, texto) in enumerate(lineas):
@@ -115,7 +115,7 @@ def dibujar_esqueleto(frame, landmarks, medidos=None, comparacion=None):
 
 def imprimir_comparacion(res):
     """
-    Exactametente el mismo motivo que la función de arriba
+    Imprime el resultado de la comparación de la pose con el objetivo
     """
     if res is None:
         print(f"Sin comparacion: no existe la pose {RUTA_POSE}")
@@ -172,7 +172,7 @@ def main():
             ahora = time.monotonic()
             result = filtro.aplicar(landmarker.detect_for_video(mp_image, int((ahora - t0) * 1000)), ahora)
 
-            if (cv2.waitKey(1) & 0xFF) in (27, ord("q")): # Salir con "q", aunque me gustaria que fuera con alt + f4
+            if (cv2.waitKey(1) & 0xFF) in (27, ord("q")): # Salir con "q"
                 break
 
             if not result.pose_landmarks:
@@ -180,7 +180,7 @@ def main():
                 cv2.imshow("Esqueleto", frame)
                 continue
 
-            landmarks = result.pose_landmarks[0] # puntos normales (no los WORLD basura)
+            landmarks = result.pose_landmarks[0] # puntos normales (no los WORLD)
             puntos, visibilidad = extraer_puntos(result, ancho, alto)
             medidos = medir_angulos(puntos, ANGULOS, visibilidad)
             comparacion = comparar_pose(result, pose, ancho, alto) if pose else None

@@ -68,4 +68,3 @@ class Sonidos:
         """
         if eventos:
             self.reproducir(min(eventos, key=lambda e: PRIORIDAD.index(e) if e in PRIORIDAD else len(PRIORIDAD)))
-            # Gracias miji por tu sabiduria con los lambda

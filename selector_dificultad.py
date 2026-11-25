@@ -10,8 +10,7 @@ GRACIA_SELECCION = 0.5 # segundos por debajo del umbral que se perdonan sin rein
 
 def cargar_poses_seleccion(carpeta="jason"):
     """
-    Carga las posturas default de cada dificultad. Sinceramente, no hay mucha
-    magia aquí. Solamente que son las 11 de la noche y quiero dormir
+    Carga las posturas default de cada dificultad.
     """
     poses = {}
     for dificultad in DIFICULTADES:
@@ -50,7 +49,7 @@ class SelectorDificultad:
 
         if self.elegida is None:
             validas = {dif: punto for dif, punto in puntuaciones.items() if punto is not None and punto >= UMBRAL_SELECCION}
-            mejor = max(validas, key=validas.get) if validas else None
+            mejor = max(validas, key=validas.get) if validas else None # Toma la posición con mayor puntuación en caso de disputa
 
             if mejor is not None and mejor == self.candidata: # sigue con la misma candidata
                 self.ultimo_ok = ahora

@@ -27,7 +27,7 @@ CONFIG_POSES = {
 
 def buscar_imagen(clave_pose):
     """
-    A ver, que piensas que hace esta funcion????? Champion
+    Busca la imagen de la posición.
     """
     base = Path("media") / clave_pose
 
@@ -40,7 +40,7 @@ def buscar_imagen(clave_pose):
 
 def cargar_postura_antigua(ruta_json):
     """
-    Carga la postura antigua. Sorprendente ¿NO?
+    Carga la postura antigua.
     """
     if not ruta_json.exists():
         return None
@@ -71,7 +71,6 @@ def regenerar(imagen, nuevo=False):
     try:
         contenido = registrar_pose_desde_imagen(
             ruta_imagen=imagen,
-            ruta_modelo=MODEL_PATH,
             ruta_salida_json=ruta_json,
             nombre_pose=antigua.get("nombre", clave_pose) if antigua else clave_pose,
             articulaciones_relevantes=relevantes,
@@ -100,7 +99,7 @@ def regenerar(imagen, nuevo=False):
 
     sin_medir = [c for c in relevantes if angulos[c]["objetivo"] is None]
     aviso = f"  <-- {len(sin_medir)} sin medir, revisadla" if sin_medir else ""
-    estado = "ACTUALIZADA" if antigua else "NUEVA      "
+    estado = "ACTUALIZADA" if antigua else "NUEVA"
     return f"{estado} {ruta_json} <- {imagen}{aviso}\n" + "\n".join(lineas)
 
 
@@ -117,7 +116,7 @@ def main(poses=None, nuevo=False):
         imagenes = sorted(p for p in Path("media").glob("*/*") if p.suffix.lower() in EXTENSIONES)
 
     if not imagenes:
-        print("No hay imágenes que procesar en media/<dificultad>/")
+        print("No hay imágenes que procesar")
         return
 
     for imagen in imagenes:
@@ -130,4 +129,4 @@ def main(poses=None, nuevo=False):
 
 if __name__ == "__main__":
     argumentos = sys.argv[1:]
-    main([a for a in argumentos if not a.startswith("--")], nuevo="--nuevo" in argumentos)
+    main([a for a in argumentos if not a.startswith("--")], nuevo="--nuevo" in argumentos) # Puedes indicarle por argumentos exatamente qué imagenes quieres cargar
