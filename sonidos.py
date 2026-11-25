@@ -52,7 +52,7 @@ class Sonidos:
         """
         No bloquea el juego. Si falla el audio se desactiva y el juego sigue en silencio
         """
-        if not self.activos or nombre not in self.sonidos: # Y este sonido pallo??!??!?!?!?! FUERA
+        if not self.activos or nombre not in self.sonidos: # No detecta el sonido o no está activado
             return
 
         datos, frecuencia = self.sonidos[nombre]

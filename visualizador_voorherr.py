@@ -107,7 +107,7 @@ def mostrar_json_lado_a_lado(ruta_json, ruta_imagen, max_ancho=1600, max_alto=90
 
     postura = cargar_postura(ruta_json)
     imagen_bgr, resultado = detectar_exoesqueleto_imagen(ruta_imagen, MODEL_PATH)
-    alto, ancho = imagen_bgr.shape[0], imagen_bgr.shape[0]
+    alto, ancho = imagen_bgr.shape[0], imagen_bgr.shape[1]
 
     panel_esqueleto = crear_panel_esqueleto(alto, ancho, resultado, postura)
     composicion = np.hstack((imagen_bgr, panel_esqueleto)) # Pega cada imagen una al lado de la otra. Izquierda -> foto. Derecha -> su exoesqueleto
