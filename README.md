@@ -30,6 +30,18 @@ python main.py
 
 Teclas: `Q` o `ESC` para salir, `M` para volver al menú y `ENTER` en los resultados para volver al menú.
 
+## 3.1 Fragmento en dificultad fácil
+
+https://github.com/user-attachments/assets/3070d477-9951-48d8-abcb-5cdc15382f22
+
+## 3.2 Fragmento en dificultad media
+
+https://github.com/user-attachments/assets/57db2dc6-46bf-49a5-ba8f-a89d4d31e37f
+
+## 3.3 Fragmento en dificultad difícil
+
+https://github.com/user-attachments/assets/0df6e589-8f2a-4c0c-8beb-e50d3e6764dc
+
 ### Con Docker (solo Linux)
 
 Antes hay que haber descargado los modelos (paso 2), porque la imagen copia la carpeta `models/` tal cual.
