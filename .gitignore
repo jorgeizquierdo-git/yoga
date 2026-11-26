@@ -2,3 +2,4 @@
 mp_env/
 .venv/
 __pycache__/
+*.mp4
