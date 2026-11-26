@@ -109,23 +109,20 @@ class OneEuro:
             return x
 
         # Velocidad del punto que se mide como el cambio de dicho punto entre el fotograma anterior y el actual (en segundos).
-        # Las coordenadas están normalizadas a la imagen, por lo que la velocidad va en "imágenes por segundo" (si pasa de 1, 
-        # significa que ha sobrepasado la imagen entera).
+        # Las coordenadas están normalizadas a la imagen, por lo que la velocidad va en "imágenes por segundo" (una velocidad de 1 significa que, 
+        # a ese ritmo, el punto cruzaría la imagen entera en un segundo).
         dx = (x - self.x) / dt
 
         # La velocidad calculada con puntos que tiemblan es más ruidosa que los puntos en sí mismo, por lo que se suavizan
         # igualmente, con un corte fijo
         self.dx += _alfa(self.d_cutoff, dt) * (dx - self.dx)
 
-        # 3. La clave del One Euro: el corte crece con la velocidad.
-        #    Quieto -> corte = min_cutoff (mucho suavizado). Moviéndose -> corte mayor (poco retraso).
-        #    Ejemplo: moviéndose a 0.5 imágenes/s, corte = (1 + 5 * 0.5) = 3.5 Hz.
         # El corte es una función que crece con la velocidad: Cuando se está quieto, corte = min_cutoff (mucho suavizado). 
         # Moviendose tiene un corte mayor (pco retraso). 
         # Si se moviera a 0.5 imagenes / s el corte sería (1 + 5 * 0.5) = 3.5 Hz.
         corte = (self.min_cutoff + self.beta * abs(self.dx)) * factor_corte
 
-        # Suavizado exponencial del valor con el alfa correspondiente a este corte. x_nuevo = alpha * (x_nuevo - filtrado)
+        # Suavizado exponencial del valor con el alfa correspondiente a este corte. x_nuevo = filtro + alpha * (x_nuevo - filtrado)
         self.x += _alfa(corte, dt) * (x - self.x)
         return self.x
 
@@ -137,7 +134,7 @@ class _Punto:
     def __init__(self):
         self.fx = OneEuro(FILTRO_MIN_CUTOFF, FILTRO_BETA, FILTRO_D_CUTOFF) # Filtro de la coordenada x
         self.fy = OneEuro(FILTRO_MIN_CUTOFF, FILTRO_BETA, FILTRO_D_CUTOFF) # Filtro de la coordenada y
-        self.ultimo = None # (x, y visibilidad) del último fotograma bueno. Es lo que se repite ante un salto
+        self.ultimo = None # (x, y, z, visibilidad) del último fotograma bueno. Es lo que se repite ante un salto
         self.t_bueno = None # Instante del último fotograma bueno
         self.sospechoso_desde = None # Instante en que el punto empezó a ser sospechoso
 
